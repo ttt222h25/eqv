@@ -210,19 +210,21 @@ class VisualizerService : Service() {
             else -> null
         }
 
-        if (playing && pause == null) activate(s) else arm()
-
         var hidden: String? = null
-        if (mode == ServiceMode.ACTIVE) {
+        if (playing && pause == null) {
             val fg = signals.foregroundPackage
             hidden = when {
                 fg != null && fg in b.hideInApps -> getString(R.string.pause_hidden_app)
                 b.hideInFullscreen && !barsVisible -> getString(R.string.pause_fullscreen)
                 else -> null
             }
+            // While hidden the window stays (to keep receiving fullscreen insets) but the audio
+            // engine and rendering stop.
+            activate(s, runEngine = hidden == null)
             overlay.setVisualsVisible(hidden == null)
             overlay.setAlpha(s.performance.windowAlpha)
-            setEngineHeld(hidden == null)
+        } else {
+            arm()
         }
         signals.setForegroundPolling(mode == ServiceMode.ACTIVE && b.hideInApps.isNotEmpty())
 
@@ -235,7 +237,7 @@ class VisualizerService : Service() {
         updateNotification(s, pause ?: hidden)
     }
 
-    private fun activate(s: AppSettings) {
+    private fun activate(s: AppSettings, runEngine: Boolean) {
         if (mode != ServiceMode.ACTIVE) {
             mode = ServiceMode.ACTIVE
             AudioEngine.restart()
@@ -245,7 +247,7 @@ class VisualizerService : Service() {
                 overlay.view?.renderer?.onBeat = { strength, thumped -> onBeat(strength, thumped) }
             }
         }
-        setEngineHeld(true)
+        setEngineHeld(runEngine)
     }
 
     private fun arm() {

@@ -133,9 +133,7 @@ class NowPlayingListener : NotificationListenerService() {
                     c.playbackState?.state == PlaybackState.STATE_BUFFERING,
             )
         }
-        val old = MediaMonitor.state.value
-        val new = MediaState(connected = true, sessions = sessions)
-        MediaMonitor.state.value = new
+        MediaMonitor.state.value = MediaState(connected = true, sessions = sessions)
 
         // Album colors from the top playing session.
         val behavior = SettingsRepository.get(this).state.value.behavior
@@ -150,32 +148,6 @@ class NowPlayingListener : NotificationListenerService() {
             lastArt = art
             AlbumPalette.extract(art)
         }
-
-        // Wake the visualizer from the background when music starts and the service died.
-        val settings = SettingsRepository.get(this).state.value
-        if (settings.enabled && settings.behavior.autoStart && !VisualizerService.isRunning &&
-            new.anyAllowedPlaying(settings.behavior) && !old.anyAllowedPlaying(settings.behavior)
-        ) {
-            if (!VisualizerService.tryStart(this)) postResumeNotification()
-        }
-    }
-
-    private fun postResumeNotification() {
-        val nm = getSystemService(NotificationManager::class.java) ?: return
-        Notifications.ensureChannels(this)
-        val pi = PendingIntent.getForegroundService(
-            this, 3,
-            Intent(this, VisualizerService::class.java).setAction(VisualizerService.ACTION_START),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val n = Notification.Builder(this, Notifications.CHANNEL_ALERTS)
-            .setSmallIcon(R.drawable.ic_stat_eqv)
-            .setContentTitle(getString(R.string.resume_title))
-            .setContentText(getString(R.string.resume_text))
-            .setContentIntent(pi)
-            .setAutoCancel(true)
-            .build()
-        nm.notify(Notifications.ID_RESUME, n)
     }
 
     companion object {
@@ -221,5 +193,42 @@ object AlbumPalette {
         if (hsv[1] < 0.15f) hsv[1] = hsv[1] * 0.5f // keep greys grey (they become white-ish)
         else hsv[1] = hsv[1].coerceAtLeast(0.55f)
         return Color.HSVToColor(hsv)
+    }
+}
+
+/**
+ * Wakes the visualizer when an allowed player starts and the service is not running (e.g. it
+ * was killed). Runs app-wide so it also fires once settings finish loading after boot.
+ */
+object AutoStarter {
+    private var wasPlaying = false
+
+    fun onChange(context: Context, settingsReady: Boolean) {
+        val s = SettingsRepository.get(context).state.value
+        val playing = MediaMonitor.state.value.anyAllowedPlaying(s.behavior)
+        val rising = playing && !wasPlaying
+        if (settingsReady) wasPlaying = playing
+        if (!settingsReady || !rising) return
+        if (s.enabled && s.behavior.autoStart && !VisualizerService.isRunning) {
+            if (!VisualizerService.tryStart(context)) postResumeNotification(context)
+        }
+    }
+
+    private fun postResumeNotification(context: Context) {
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        Notifications.ensureChannels(context)
+        val pi = PendingIntent.getForegroundService(
+            context, 3,
+            Intent(context, VisualizerService::class.java).setAction(VisualizerService.ACTION_START),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = Notification.Builder(context, Notifications.CHANNEL_ALERTS)
+            .setSmallIcon(R.drawable.ic_stat_eqv)
+            .setContentTitle(context.getString(R.string.resume_title))
+            .setContentText(context.getString(R.string.resume_text))
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(Notifications.ID_RESUME, n)
     }
 }

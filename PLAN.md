@@ -1,6 +1,6 @@
 # EQV: system-wide music visualizer for Nothing Phone (3) (Step 0 plan)
 
-Status: **draft, waiting for approval**. Nothing below is built yet.
+Status: **approved and built**. The phone-only workflow uses GitHub Actions for builds (see README).
 
 ## 1. Research findings (Android 15/16), and what they force
 
