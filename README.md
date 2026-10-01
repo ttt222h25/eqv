@@ -20,13 +20,14 @@ Every push is built by GitHub Actions, and the newest APK is always at:
 
 1. Open that link in Chrome on the phone and download `eqv.apk`.
 2. Open it. If asked, allow **Install unknown apps** for Chrome. If Play Protect warns about an unknown developer, tap **More details → Install anyway** (it's a debug build signed with the repo's debug key).
-3. Open **EQV → Setup** and grant each item:
+3. If Play Protect says **"App blocked to protect your device"** (it blocks browser-installed apps that request notification access): Play Store → profile → Play Protect → ⚙ → turn off **Scan apps with Play Protect**, install, then turn it back on.
+4. Open **EQV → Setup** and grant each item. If Android says **"App was denied access"** / **"Restricted setting"**: App info → ⋮ → **Allow restricted settings** → confirm, then try again (needed once for both the overlay and notification access):
    - Display over other apps
    - Microphone (required by Android for the system visualizer; nothing is recorded)
    - Notifications
-   - Notification access. If it's **greyed out / "Restricted setting"**: Settings → Apps → EQV → ⋮ → **Allow restricted settings**, then try again. Android does this for apps installed from a browser.
-4. Optional: Usage access (for "hide in these apps") and Battery → Unrestricted (keeps auto-start instant).
-5. Quick Settings → edit (pencil) → add the **EQV** and **EQV preset** tiles.
+   - Notification access
+5. Optional: Usage access (for "hide in these apps") and Battery → Unrestricted (keeps auto-start instant).
+6. Quick Settings → edit (pencil) → add the **EQV** and **EQV preset** tiles.
 
 Updates install over the previous build: all builds share one signing key and increasing version codes.
 

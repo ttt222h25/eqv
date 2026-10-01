@@ -278,14 +278,16 @@ fun PermissionsScreen() {
             val component = ComponentName(ctx, NowPlayingListener::class.java).flattenToString()
             open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component))
         }
-        if (!perms.listener) {
+        if (!perms.overlay || !perms.listener) {
             Card {
                 Column(Modifier.padding(16.dp)) {
-                    Text("GREYED OUT? \"RESTRICTED SETTING\"", style = MaterialTheme.typography.labelMedium, color = Nothing.Red)
+                    Text("\"APP WAS DENIED ACCESS\" / \"RESTRICTED SETTING\"?", style = MaterialTheme.typography.labelMedium, color = Nothing.Red)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Android blocks notification access for apps installed from a browser until you allow it:\n" +
-                            "App info → ⋮ (top right) → Allow restricted settings → confirm. Then come back and tap step 4 again.",
+                        "Android 15+ locks \"Display over other apps\" and notification access for apps installed from a browser. Unlock once:\n" +
+                            "1. Try the permission once (Android refuses).\n" +
+                            "2. App info → ⋮ (top right) → Allow restricted settings → confirm with fingerprint/PIN.\n" +
+                            "3. Come back and tap Allow again.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(10.dp))
