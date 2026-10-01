@@ -46,6 +46,17 @@ object PresetOps {
         return s.copy(userPresets = s.userPresets.map { if (it.id == id) it.copy(look = s.look) else it })
     }
 
+    /**
+     * On load: an unedited built-in shows its current definition, so app updates to built-in
+     * presets reach the active one too (your edits live in presetEdits and are kept).
+     */
+    fun refreshActive(s: AppSettings): AppSettings {
+        val id = s.activePresetId
+        if (id in s.presetEdits) return s
+        val builtIn = BuiltInPresets.byId(id) ?: return s
+        return if (s.look == builtIn.look) s else s.copy(look = builtIn.look)
+    }
+
     /** True when a built-in preset carries your edits. */
     fun isEdited(s: AppSettings, id: String): Boolean = id in s.presetEdits
 

@@ -78,6 +78,15 @@ class PresetOpsTest {
     }
 
     @Test
+    fun loadRefreshesOnlyUneditedBuiltIns() {
+        val club = BuiltInPresets.byId("builtin.club")!!.look
+        val stale = AppSettings(activePresetId = "builtin.club", look = club.copy(pulse = PulseLayer(enabled = true)))
+        assertEquals(club, PresetOps.refreshActive(stale).look)
+        val edited = edit(PresetOps.apply(AppSettings(), "builtin.club")) { it.copy(bars = it.bars.copy(height = 0.3f)) }
+        assertEquals(edited, PresetOps.refreshActive(edited))
+    }
+
+    @Test
     fun editsToUserPresetsAutoSave() {
         var s = PresetOps.saveAsNew(AppSettings(), "Mine")
         val id = s.activePresetId
@@ -121,7 +130,7 @@ class PresetOpsTest {
             for (c in listOf(l.edge.color, l.bars.color, l.radial.color, l.wave.color, l.pulse.color)) {
                 assertTrue(p.name, c.glow in 0f..1f && c.opacity in 0f..1f)
             }
-            assertTrue(p.name, l.pulse.strength in 0f..1f && l.haptics.intensity in 0f..1f && l.thump.strength in 0f..1f)
+            assertTrue(p.name, l.pulse.strength in 0f..1f && l.thump.strength in 0f..1f)
             assertTrue(p.name, l.beat.lowHz < l.beat.highHz)
             val f = l.filter
             for (v in listOf(f.amount, f.scanlines, f.mask, f.grid, f.vignette, f.bezel, f.grain, f.rollBar, f.flicker, f.tracking, f.bassDrive, f.beatFxStrength)) {
@@ -129,6 +138,7 @@ class PresetOpsTest {
             }
             assertTrue(p.name, f.tintAmount in 0f..0.4f)
             assertFalse(p.name + " uses the classic shake", l.thump.enabled)
+            assertFalse(p.name + " flashes on beats", l.pulse.enabled && l.pulse.style != PulseStyle.RING)
             assertTrue(p.name, l.edge.enabled || l.bars.enabled || l.radial.enabled || l.wave.enabled)
         }
         val json = PresetOps.export(all)

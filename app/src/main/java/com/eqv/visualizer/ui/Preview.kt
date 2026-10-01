@@ -89,7 +89,7 @@ fun LivePreview(height: Dp = 250.dp) {
                             // Feel the haptics while tuning, unless the overlay is already doing it.
                             if (RuntimeState.service.value.mode != ServiceMode.ACTIVE) {
                                 val s = repo.state.value
-                                haptics.onBeat(strength, s.look.haptics, System.nanoTime(), force = thumped && s.look.thump.withHaptic)
+                                haptics.onBeat(strength, s.haptics, System.nanoTime(), force = thumped && s.look.thump.withHaptic)
                             }
                         }
                         v.start()

@@ -4,7 +4,7 @@ A system-wide, click-through music visualizer that runs on top of any app (Spoti
 
 - **Layers** (combine freely, independent settings): edge lighting that follows the real rounded corners and punch-hole, EQ bars (bottom/top/both/sides), radial spectrum, waveform, and beat pulse (vignette/flash/ring).
 - **Screen filters** (Opera GX style): CRT, VHS, film, night vision, pocket LCD, dot matrix, glitch, or custom (scanlines, RGB stripes, pixel grid, tube edge, vignette, color wash, grain, roll bar, VHS tracking). Beat "hits" are filter effects: flicker, scan jump, glitch bands, grain burst, vignette pump. Drawn on top of other apps, since Android doesn't let an app change their pixels.
-- **Beat haptics**: composition primitives (THUD/CLICK/LOW_TICK), with waveform fallbacks.
+- **Beat haptics** (one global setting, off by default, never switched by presets): crisp Tap by default, only on strong kicks, strength curve + minimum gap; composition primitives with waveform fallbacks.
 - **Shake** (classic, off in all presets): a fake screen shake of the visuals (scale/offset pulse + chromatic edge flash + haptic). The in-app preview can shake for real.
 - **Smart behavior**: auto start/stop with music, which players trigger it, hide in fullscreen or in chosen apps, pause on screen-off/calls/low battery, album-art colors, Quick Settings tiles (toggle and preset), and a notification with on/off + next preset.
 - **Audio**: Visualizer API → microphone fallback chain (with a silence watchdog), optional HQ playback capture, and a demo signal.

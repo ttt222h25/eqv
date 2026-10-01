@@ -225,13 +225,14 @@ fun HapticsScreen() {
     val (s, repo) = rememberSettings()
     val ctx = LocalContext.current
     val haptics = remember { BeatHaptics(ctx) }
-    val h = s.look.haptics
-    fun edit(t: (com.eqv.visualizer.settings.Haptics) -> com.eqv.visualizer.settings.Haptics) = repo.updateLook { it.copy(haptics = t(it.haptics)) }
+    val h = s.haptics
+    fun edit(t: (com.eqv.visualizer.settings.Haptics) -> com.eqv.visualizer.settings.Haptics) = repo.update { it.copy(haptics = t(it.haptics)) }
     ScrollColumn {
-        SwitchRow("Beat haptics", h.enabled, "Kick the vibration motor on detected beats") { v -> edit { it.copy(enabled = v) } }
+        Hint("One setting for all presets: switching presets never turns vibration on or off.")
+        SwitchRow("Beat haptics", h.enabled, "Vibrate on strong kicks") { v -> edit { it.copy(enabled = v) } }
         SliderRow("Intensity", h.intensity, 0.05f..1f, ::fmtPct) { v -> edit { it.copy(intensity = v) } }
-        SliderRow("Minimum beat strength", h.minStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(minStrength = v) } }
-        SliderRow("Extra cooldown", h.cooldownMs, 0f..600f, ::fmtMs) { v -> edit { it.copy(cooldownMs = v) } }
+        SliderRow("Only beats stronger than", h.minStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(minStrength = v) } }
+        SliderRow("Minimum gap", h.cooldownMs, 0f..800f, ::fmtMs) { v -> edit { it.copy(cooldownMs = v) } }
         ChoiceRow("Pattern", HapticPattern.entries, h.pattern, { pretty(it) }) { v -> edit { it.copy(pattern = v) } }
         Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
             GhostButton("Test") { haptics.test(h) }

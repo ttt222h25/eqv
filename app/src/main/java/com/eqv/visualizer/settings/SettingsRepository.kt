@@ -74,7 +74,7 @@ class SettingsRepository private constructor(context: Context) {
         scope.launch {
             val loaded = store.data.first()
             synchronized(lock) {
-                var v = loaded.normalized()
+                var v = PresetOps.refreshActive(loaded.normalized())
                 for (t in pending) v = t(v).normalized()
                 pending.clear()
                 _state.value = v

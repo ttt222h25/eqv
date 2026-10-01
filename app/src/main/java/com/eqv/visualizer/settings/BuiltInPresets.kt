@@ -110,7 +110,7 @@ object BuiltInPresets {
                             mirror = true, height = 0.16f, thickness = 0.66f,
                             color = album(glow = 0.45f),
                         ),
-                        pulse = PulseLayer(color = album(), strength = 0.25f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 40, sensitivity = 1.15f),
                     ),
                 ),
@@ -258,7 +258,7 @@ object BuiltInPresets {
                             color = ColorSpec(mode = ColorMode.ALBUM, glow = 0.7f),
                             radius = 0.2f, length = 0.16f, rotationSpeed = 0.03f,
                         ),
-                        pulse = PulseLayer(style = PulseStyle.RING, color = ColorSpec(mode = ColorMode.ALBUM), strength = 0.4f, decayMs = 420f),
+                        pulse = PulseLayer(enabled = true, style = PulseStyle.RING, color = ColorSpec(mode = ColorMode.ALBUM), strength = 0.4f, decayMs = 420f),
                         motion = Motion(bandCount = 64, decayMs = 260f),
                     ),
                 ),
@@ -293,7 +293,7 @@ object BuiltInPresets {
                             color = gradient(TEAL, OCEAN, glow = 0.6f),
                             positionY = 0.93f, amplitude = 0.07f, thicknessDp = 2.5f, smoothness = 0.8f,
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(OCEAN), strength = 0.18f, decayMs = 500f, size = 0.7f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 28, attackMs = 70f, decayMs = 520f),
                         beat = BeatConfig(sensitivity = 0.45f, rippleStrength = 0.4f),
                     ),
@@ -309,7 +309,7 @@ object BuiltInPresets {
                             mirror = true, height = 0.1f, thickness = 0.6f, cornerRadiusDp = 8f,
                             color = gradient(YELLOW, MAGENTA, glow = 0.45f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(ORANGE), strength = 0.22f, decayMs = 380f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 32, attackMs = 40f, decayMs = 360f),
                     ),
                 ),
@@ -350,13 +350,12 @@ object BuiltInPresets {
                             position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.BLOCKS, mirror = true, height = 0.09f,
                             color = ColorSpec(mode = ColorMode.RAINBOW, rainbowSpeed = 0.2f, glow = 0.6f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, strength = 0.3f, decayMs = 200f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 48, sensitivity = 1.3f, attackMs = 10f, decayMs = 160f),
                         beat = BeatConfig(sensitivity = 0.65f, rippleStrength = 0.9f),
-                        haptics = Haptics(enabled = true, intensity = 0.8f),
                     ),
                 ),
-                // Everything on: fast rainbow, side bars, glitch bands on every beat, sharp haptics.
+                // Everything on: fast rainbow, side bars, glitch bands on every beat.
                 p(
                     "rave", "Rave",
                     Look(
@@ -373,7 +372,6 @@ object BuiltInPresets {
                         filter = FilterStyles.of(FilterStyle.GLITCH).copy(scanlines = 0f, mask = 0f, grain = 0.1f),
                         motion = Motion(bandCount = 40, sensitivity = 1.4f, attackMs = 8f, decayMs = 130f),
                         beat = BeatConfig(sensitivity = 0.7f, cooldownMs = 150f, rippleStrength = 1f),
-                        haptics = Haptics(enabled = true, intensity = 0.85f, pattern = HapticPattern.SHARP),
                     ),
                 ),
                 // Mirror ball: spinning dot ring in the middle, rings on every kick.
@@ -391,10 +389,9 @@ object BuiltInPresets {
                             color = rainbow(0.15f, glow = 0.8f),
                             radius = 0.18f, length = 0.2f, thicknessDp = 5f, rotationSpeed = 0.12f, beatScale = 0.4f,
                         ),
-                        pulse = PulseLayer(style = PulseStyle.RING, color = solid(GOLD), strength = 0.5f, decayMs = 360f),
+                        pulse = PulseLayer(enabled = true, style = PulseStyle.RING, color = solid(GOLD), strength = 0.5f, decayMs = 360f),
                         motion = Motion(bandCount = 48, sensitivity = 1.2f, attackMs = 15f, decayMs = 200f),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.8f),
-                        haptics = Haptics(enabled = true, intensity = 0.6f, pattern = HapticPattern.DOUBLE),
                     ),
                 ),
                 // Cyan/magenta tubes on both edges.
@@ -409,12 +406,12 @@ object BuiltInPresets {
                             position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.LINE, mirror = true, height = 0.08f,
                             color = bands(MAGENTA, PURPLE, CYAN, glow = 0.9f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(MAGENTA), strength = 0.3f, decayMs = 220f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 48, sensitivity = 1.2f, attackMs = 15f, decayMs = 200f),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.75f),
                     ),
                 ),
-                // Concert lights: white spotlight vignette, bars hanging from the top like a lighting rig.
+                // Concert lights: bars hanging from the top like a lighting rig.
                 p(
                     "stage", "Stage",
                     Look(
@@ -427,10 +424,9 @@ object BuiltInPresets {
                             position = BarsPosition.TOP, mirror = true, height = 0.13f, thickness = 0.5f, cornerRadiusDp = 3f,
                             color = gradient(white, AMBER, glow = 0.7f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(white), strength = 0.32f, decayMs = 240f, size = 0.45f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 12f, decayMs = 220f),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.8f),
-                        haptics = Haptics(enabled = true, intensity = 0.7f),
                     ),
                 ),
             ),
@@ -438,7 +434,7 @@ object BuiltInPresets {
         PresetGroup(
             "Bass & gym",
             listOf(
-                // Corners explode on the kick; everything else stays dark.
+                // Corners light up on the kick; everything else stays dark.
                 p(
                     "bassdrop", "Bass Drop",
                     Look(
@@ -448,13 +444,12 @@ object BuiltInPresets {
                             thicknessDp = 5f, glowWidthDp = 52f, reactivity = 0f, idleLevel = 0.04f,
                         ),
                         bars = off,
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(red), strength = 0.5f, decayMs = 300f, size = 0.5f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 24, sensitivity = 1.3f, attackMs = 8f, decayMs = 260f, bassWeight = 1.4f, trebleWeight = 0.8f),
                         beat = BeatConfig(sensitivity = 0.6f, cooldownMs = 220f, rippleStrength = 1f, lowHz = 30f, highHz = 120f),
-                        haptics = Haptics(enabled = true, intensity = 1f, minStrength = 0.3f, pattern = HapticPattern.RUMBLE),
                     ),
                 ),
-                // Loud and blocky; phone kicks in your hand on every beat.
+                // Loud and blocky.
                 p(
                     "gym", "Gym",
                     Look(
@@ -466,13 +461,12 @@ object BuiltInPresets {
                             style = BarsStyle.BLOCKS, height = 0.18f, thickness = 0.72f,
                             color = bands(red, ORANGE, YELLOW, glow = 0.55f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(red), strength = 0.38f, decayMs = 200f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 24, sensitivity = 1.35f, attackMs = 10f, decayMs = 170f, bassWeight = 1.2f),
                         beat = BeatConfig(sensitivity = 0.65f, rippleStrength = 0.9f),
-                        haptics = Haptics(enabled = true, intensity = 0.9f, minStrength = 0.3f, pattern = HapticPattern.KICK),
                     ),
                 ),
-                // 808s: purple glow, long rumble, tuned to the sub-bass.
+                // 808s: purple glow tuned to the sub-bass.
                 p(
                     "trap", "Trap",
                     Look(
@@ -485,10 +479,9 @@ object BuiltInPresets {
                             mirror = true, height = 0.1f, thickness = 0.5f, cornerRadiusDp = 10f,
                             color = gradient(MAGENTA, PURPLE, glow = 0.6f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(PURPLE), strength = 0.4f, decayMs = 420f),
+                        pulse = noPulse,
                         motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 12f, decayMs = 320f, minHz = 25f, bassWeight = 1.35f),
                         beat = BeatConfig(sensitivity = 0.55f, cooldownMs = 240f, rippleStrength = 0.9f, lowHz = 25f, highHz = 100f),
-                        haptics = Haptics(enabled = true, intensity = 0.9f, pattern = HapticPattern.RUMBLE),
                     ),
                 ),
             ),
@@ -527,7 +520,7 @@ object BuiltInPresets {
                         beat = BeatConfig(sensitivity = 0.35f, rippleStrength = 0.25f),
                     ),
                 ),
-                // Pink-red glow, a slow heartbeat ring, soft haptic on the strong beats.
+                // Pink-red glow and a slow heartbeat ring.
                 p(
                     "datenight", "Date Night",
                     Look(
@@ -541,10 +534,9 @@ object BuiltInPresets {
                             color = solid(PINK, glow = 0.8f, opacity = 0.8f),
                             positionY = 0.9f, amplitude = 0.04f, thicknessDp = 2f, smoothness = 0.85f,
                         ),
-                        pulse = PulseLayer(style = PulseStyle.RING, color = solid(PINK), strength = 0.3f, decayMs = 600f),
+                        pulse = PulseLayer(enabled = true, style = PulseStyle.RING, color = solid(PINK), strength = 0.3f, decayMs = 600f),
                         motion = Motion(bandCount = 24, attackMs = 60f, decayMs = 520f, sensitivity = 0.95f),
                         beat = BeatConfig(sensitivity = 0.4f, cooldownMs = 400f, rippleStrength = 0.4f),
-                        haptics = Haptics(enabled = true, intensity = 0.35f, minStrength = 0.6f, pattern = HapticPattern.SOFT, cooldownMs = 400f),
                     ),
                 ),
             ),
@@ -607,7 +599,6 @@ object BuiltInPresets {
                         motion = Motion(bandCount = 16, sensitivity = 1.2f, attackMs = 5f, decayMs = 140f, peakHoldMs = 600f, peakFallPerSec = 1.4f),
                         filter = FilterStyles.of(FilterStyle.CRT).copy(scanlines = 0.4f, mask = 0.2f, bezel = 0.4f, rollBar = 0.15f, beatFx = BeatFx.NONE),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.6f),
-                        haptics = Haptics(enabled = true, intensity = 0.5f, pattern = HapticPattern.SHARP),
                     ),
                 ),
                 // 80s outrun: magenta/cyan, line bars + glowing horizon wave.
@@ -627,7 +618,7 @@ object BuiltInPresets {
                             color = solid(CYAN, glow = 0.9f),
                             positionY = 0.72f, amplitude = 0.04f, thicknessDp = 2f, smoothness = 0.7f,
                         ),
-                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(MAGENTA), strength = 0.25f, decayMs = 300f),
+                        pulse = noPulse,
                         filter = FilterLayer(
                             enabled = true, style = FilterStyle.CUSTOM, scanlines = 0.3f, scanlineDp = 3f, vignette = 0.3f,
                             rollBar = 0.2f, rollSpeed = 0.06f, bassDrive = 0.3f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.5f,

@@ -217,7 +217,7 @@ private fun describe(p: Preset, edited: Boolean): String {
         "pulse".takeIf { l.pulse.enabled },
         "${l.filter.style.name.lowercase().replace('_', ' ')} filter".takeIf { l.filter.enabled },
     ).joinToString(" + ").ifEmpty { "no layers" }
-    val extras = listOfNotNull("haptics".takeIf { l.haptics.enabled }, "shake".takeIf { l.thump.enabled })
+    val extras = listOfNotNull("shake".takeIf { l.thump.enabled })
     return (if (p.builtIn) (if (edited) "Built-in, edited · " else "Built-in · ") else "") + layers + if (extras.isNotEmpty()) " · " + extras.joinToString() else ""
 }
 

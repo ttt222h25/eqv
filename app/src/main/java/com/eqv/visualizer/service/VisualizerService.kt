@@ -273,8 +273,8 @@ class VisualizerService : Service() {
     private fun onBeat(strength: Float, thumped: Boolean) {
         val s = repo.state.value
         val now = System.nanoTime()
-        if (thumped && s.look.thump.withHaptic) haptics.onBeat(strength, s.look.haptics, now, force = true)
-        else haptics.onBeat(strength, s.look.haptics, now)
+        if (thumped && s.look.thump.withHaptic) haptics.onBeat(strength, s.haptics, now, force = true)
+        else haptics.onBeat(strength, s.haptics, now)
     }
 
     private fun onEngineStatus() {

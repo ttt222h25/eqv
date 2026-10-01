@@ -20,6 +20,8 @@ data class AppSettings(
     val userPresets: List<Preset> = emptyList(),
     /** Your edits to built-in presets, by preset id (built-ins themselves are code, read-only). */
     val presetEdits: Map<String, Look> = emptyMap(),
+    /** Beat haptics are global (not per preset), so switching presets never starts vibrating. */
+    val haptics: Haptics = Haptics(),
     val behavior: Behavior = Behavior(),
     val performance: Performance = Performance(),
     val debug: DebugOptions = DebugOptions(),
@@ -44,7 +46,6 @@ data class Look(
     val filter: FilterLayer = FilterLayer(),
     val motion: Motion = Motion(),
     val beat: BeatConfig = BeatConfig(),
-    val haptics: Haptics = Haptics(),
     val thump: Thump = Thump(),
 )
 
@@ -188,7 +189,7 @@ enum class PulseStyle { VIGNETTE, FLASH, RING }
 
 @Serializable
 data class PulseLayer(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val style: PulseStyle = PulseStyle.VIGNETTE,
     val color: ColorSpec = ColorSpec(mode = ColorMode.SOLID),
     /** Peak opacity of the pulse, 0..1. */
@@ -344,17 +345,17 @@ data class BeatConfig(
 )
 
 @Serializable
-enum class HapticPattern { KICK, SHARP, SOFT, DOUBLE, RUMBLE }
+enum class HapticPattern { TAP, KICK, SHARP, SOFT, DOUBLE, RUMBLE }
 
 @Serializable
 data class Haptics(
     val enabled: Boolean = false,
-    val intensity: Float = 0.7f,
-    /** Beats weaker than this (0..1) do not vibrate. */
-    val minStrength: Float = 0.35f,
-    val pattern: HapticPattern = HapticPattern.KICK,
-    /** Extra cooldown on top of the beat cooldown so the motor never buzzes continuously. */
-    val cooldownMs: Float = 120f,
+    val intensity: Float = 0.5f,
+    /** Beats weaker than this (0..1) do not vibrate: only real kicks get through. */
+    val minStrength: Float = 0.5f,
+    val pattern: HapticPattern = HapticPattern.TAP,
+    /** Minimum gap between vibrations so the motor never machine-guns. */
+    val cooldownMs: Float = 250f,
 )
 
 @Serializable

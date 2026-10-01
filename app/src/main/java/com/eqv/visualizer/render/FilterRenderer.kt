@@ -77,7 +77,7 @@ class FilterRenderer {
         var tracking = cfg.tracking * k
         when (cfg.beatFx) {
             BeatFx.NONE -> {}
-            BeatFx.FLICKER -> dim += fx * 0.4f * (0.6f + 0.4f * hash01(floor(t * 60f) + 3f))
+            BeatFx.FLICKER -> dim += fx * FLICKER_DIM * (0.6f + 0.4f * hash01(floor(t * 60f) + 3f))
             BeatFx.SCAN_JUMP -> {
                 phase += fx * period * 3f * fxRand
                 scan = (scan + fx * 0.5f).coerceAtMost(1f)
@@ -88,7 +88,7 @@ class FilterRenderer {
                 tracking += fx * 0.5f
             }
             BeatFx.GRAIN_BURST -> grain = (grain + fx * 0.8f).coerceAtMost(1.2f)
-            BeatFx.VIGNETTE_PUMP -> vignette = (vignette + fx * 0.6f).coerceAtMost(1.3f)
+            BeatFx.VIGNETTE_PUMP -> vignette = (vignette + fx * PUMP_VIGNETTE).coerceAtMost(1.3f)
         }
 
         val s = shader
@@ -186,6 +186,9 @@ class FilterRenderer {
         const val BEZEL_WIDTH = 0.07f
         const val GRAIN_DP = 1.2f
         const val ROLL_MARGIN = 0.15f
+        /** Beat hits stay gentle: a dip in brightness, not a strobe. */
+        const val FLICKER_DIM = 0.2f
+        const val PUMP_VIGNETTE = 0.35f
     }
 }
 

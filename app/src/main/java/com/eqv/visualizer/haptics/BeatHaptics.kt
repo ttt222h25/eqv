@@ -79,7 +79,9 @@ class BeatHaptics(context: Context) {
         builtPattern = cfg.pattern
         builtIntensity = cfg.intensity
         for (i in 0 until LEVELS) {
-            val s = (0.35f + 0.65f * i / (LEVELS - 1)) * cfg.intensity.coerceIn(0f, 1f)
+            // Curved so weak beats are a light touch and only strong kicks hit at full intensity.
+            val x = i.toFloat() / (LEVELS - 1)
+            val s = (MIN_SCALE + (1f - MIN_SCALE) * x * x) * cfg.intensity.coerceIn(0f, 1f)
             effects[i] = build(cfg.pattern, s.coerceIn(0.01f, 1f))
         }
     }
@@ -95,6 +97,10 @@ class BeatHaptics(context: Context) {
         val soft = if (lowTick) VibrationEffect.Composition.PRIMITIVE_LOW_TICK else VibrationEffect.Composition.PRIMITIVE_TICK
         val prims = thud || click
         return when (pattern) {
+            // One short, crisp click: the cleanest feel on a good linear motor.
+            HapticPattern.TAP ->
+                if (click) composition(Triple(VibrationEffect.Composition.PRIMITIVE_CLICK, s * TAP_SCALE, 0))
+                else waveform(longArrayOf(0, 8), intArrayOf(0, (amp * TAP_SCALE).toInt().coerceAtLeast(1)))
             HapticPattern.KICK ->
                 if (prims) composition(Triple(kick, s, 0))
                 else waveform(longArrayOf(0, 18, 22), intArrayOf(0, amp, amp / 3))
@@ -119,5 +125,9 @@ class BeatHaptics(context: Context) {
     companion object {
         const val LEVELS = 8
         const val DOUBLE_GAP_MS = 70
+        /** Weakest allowed beat plays at this fraction of the intensity. */
+        const val MIN_SCALE = 0.2f
+        /** CLICK at full scale is harsh on strong motors; Tap tops out lower. */
+        const val TAP_SCALE = 0.7f
     }
 }
