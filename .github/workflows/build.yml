@@ -1,0 +1,66 @@
+name: Build APK
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/eqv.apk
+          cp out/eqv.apk "out/eqv-${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eqv-${{ github.run_number }}
+          path: out/eqv.apk
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+      # Rolling "latest" pre-release: a fixed download link that always points at the newest
+      # build, so the APK can be installed straight from the phone's browser.
+      - name: Publish rolling release
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest out/eqv.apk "out/eqv-${{ github.run_number }}.apk" \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --title "EQV build ${{ github.run_number }}" \
+            --notes "Debug build ${{ github.run_number }} from ${{ github.sha }}. Install eqv.apk on the phone; it updates in place over earlier builds."
