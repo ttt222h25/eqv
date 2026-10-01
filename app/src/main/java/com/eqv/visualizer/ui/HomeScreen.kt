@@ -11,6 +11,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +49,9 @@ import com.eqv.visualizer.media.NowPlayingListener
 import com.eqv.visualizer.service.DeviceSignals
 import com.eqv.visualizer.service.ProjectionActivity
 import com.eqv.visualizer.service.VisualizerService
+import com.eqv.visualizer.settings.AppSettings
 import com.eqv.visualizer.settings.AudioSourceMode
+import com.eqv.visualizer.settings.BuiltInPresets
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.SettingsRepository
 import com.eqv.visualizer.ui.theme.Nothing
@@ -163,14 +168,7 @@ fun HomeScreen(go: (Screen) -> Unit) {
 
         // ---- presets
         SectionTitle("Preset" + if (PresetOps.isModified(s)) " · edited" else "")
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            for (p in PresetOps.allPresets(s)) {
-                Chip(p.name, p.id == s.activePresetId) { repo.update { PresetOps.apply(it, p.id) } }
-            }
-        }
+        PresetPicker(s) { id -> repo.update { PresetOps.apply(it, id) } }
 
         // ---- HQ capture
         SectionTitle("Audio")
@@ -323,5 +321,48 @@ private fun PermRow(title: String, why: String, granted: Boolean, onGrant: () ->
         Spacer(Modifier.width(12.dp))
         if (granted) Text("✓", style = MaterialTheme.typography.headlineSmall, color = Nothing.White)
         else PrimaryButton("Allow", onClick = onGrant)
+    }
+}
+
+private const val MY_PRESETS = "Mine"
+
+/**
+ * Two rows: occasion groups ("Mine" first when the user saved any), then the presets of the
+ * selected group. Opens on the group of the active preset.
+ */
+@Composable
+private fun PresetPicker(s: AppSettings, onApply: (String) -> Unit) {
+    val groups = buildList {
+        if (s.userPresets.isNotEmpty()) add(MY_PRESETS to s.userPresets)
+        for (g in BuiltInPresets.groups) add(g.name to g.presets)
+    }
+    val activeGroup = groups.firstOrNull { (_, list) -> list.any { it.id == s.activePresetId } }?.first
+    var selected by rememberSaveable { mutableStateOf(activeGroup ?: groups.first().first) }
+    val shown = groups.firstOrNull { it.first == selected } ?: groups.first()
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        for ((name, _) in groups) {
+            val isShown = name == shown.first
+            Row(Modifier.clickable { selected = name }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    name.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isShown) Nothing.White else Nothing.Grey,
+                )
+                if (name == activeGroup) {
+                    Spacer(Modifier.width(4.dp))
+                    Text("•", color = Nothing.Red, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(6.dp))
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        for (p in shown.second) Chip(p.name, p.id == s.activePresetId) { onApply(p.id) }
     }
 }

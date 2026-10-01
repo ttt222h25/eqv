@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.eqv.visualizer.settings.BuiltInPresets
 import com.eqv.visualizer.settings.Preset
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.SettingsRepository
@@ -123,8 +124,12 @@ fun PresetsScreen() {
                 }
             }
         }
-        SectionTitle("Presets")
-        for (p in PresetOps.allPresets(s)) {
+        val sections = buildList {
+            if (s.userPresets.isNotEmpty()) add("My presets" to s.userPresets)
+            for (g in BuiltInPresets.groups) add(g.name to g.presets)
+        }
+        for ((title, list) in sections) for ((i, p) in list.withIndex()) {
+            if (i == 0) SectionTitle(title)
             PresetRow(
                 p = p,
                 active = p.id == s.activePresetId,

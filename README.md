@@ -8,7 +8,7 @@ A system-wide, click-through music visualizer that runs on top of any app (Spoti
 - **Smart behavior**: auto start/stop with music, which players trigger it, hide in fullscreen or in chosen apps, pause on screen-off/calls/low battery, album-art colors, Quick Settings tiles (toggle and preset), and a notification with on/off + next preset.
 - **Audio**: Visualizer API → microphone fallback chain (with a silence watchdog), optional HQ playback capture, and a demo signal.
 - **DSP**: Hann-windowed FFT (1024/2048, 50% overlap), log bands (8–64), fast-attack/slow-decay smoothing, peak hold, auto-gain, spectral-flux beats with cooldown, and an A/V sync delay per output route.
-- **Presets**: 5 built-in presets; save/rename/duplicate/delete; import/export JSON (file or clipboard).
+- **Presets**: 27 built-in presets in occasion groups (Everyday, Chill, Party, Bass & gym, Night, Focus, Retro & games); save/rename/duplicate/delete; import/export JSON (file or clipboard).
 
 See [PLAN.md](PLAN.md) for the research and architecture, and [IDEAS.md](IDEAS.md) for the backlog.
 

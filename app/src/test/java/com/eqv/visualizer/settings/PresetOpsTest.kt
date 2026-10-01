@@ -58,7 +58,29 @@ class PresetOpsTest {
         assertEquals(BuiltInPresets.all[1].id, s.activePresetId)
         s = s.copy(look = s.look.copy(motion = s.look.motion.copy(sensitivity = 2.5f)))
         assertTrue(PresetOps.isModified(s))
-        assertEquals(5, BuiltInPresets.all.size)
+    }
+
+    @Test
+    fun builtInsAreValid() {
+        val all = BuiltInPresets.all
+        assertTrue(all.size >= 25)
+        assertEquals(BuiltInPresets.DEFAULT_ID, all.first().id)
+        assertEquals(all.size, all.map { it.id }.toSet().size)
+        assertEquals(all.size, all.map { it.name.lowercase() }.toSet().size)
+        for (p in all) {
+            assertTrue(p.id, p.builtIn && p.id.startsWith("builtin."))
+            assertEquals(p.name, p.look, p.look.sanitized())
+            assertTrue(p.name, BuiltInPresets.groupOf(p.id) != null)
+            val l = p.look
+            for (c in listOf(l.edge.color, l.bars.color, l.radial.color, l.wave.color, l.pulse.color)) {
+                assertTrue(p.name, c.glow in 0f..1f && c.opacity in 0f..1f)
+            }
+            assertTrue(p.name, l.pulse.strength in 0f..1f && l.haptics.intensity in 0f..1f && l.thump.strength in 0f..1f)
+            assertTrue(p.name, l.beat.lowHz < l.beat.highHz)
+            assertTrue(p.name, l.edge.enabled || l.bars.enabled || l.radial.enabled || l.wave.enabled)
+        }
+        val json = PresetOps.export(all)
+        assertEquals(all.map { it.look }, PresetOps.parse(json).map { it.look })
     }
 
     @Test
