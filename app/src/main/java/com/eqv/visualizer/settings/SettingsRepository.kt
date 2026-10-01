@@ -96,10 +96,12 @@ class SettingsRepository private constructor(context: Context) {
         persistRequests.trySend(Unit)
     }
 
+    /**
+     * Edits the current look and auto-saves it into the active preset. Only real edits sync, so
+     * loading the app never turns an old built-in version into a saved "edit".
+     */
     fun updateLook(transform: (Look) -> Look) = update { s ->
-        // Editing detaches from the preset only by content; the active preset id is kept so
-        // "Save" can overwrite it.
-        s.copy(look = transform(s.look))
+        PresetOps.syncActive(s.copy(look = transform(s.look).sanitized()))
     }
 
     private fun AppSettings.normalized(): AppSettings = copy(

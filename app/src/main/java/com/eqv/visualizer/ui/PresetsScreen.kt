@@ -107,7 +107,7 @@ fun PresetsScreen() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PrimaryButton("Save current") { dialog = PresetDialog.SaveNew }
+            PrimaryButton("Save as new") { dialog = PresetDialog.SaveNew }
             GhostButton("Import file") { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
             GhostButton("Paste") { dialog = PresetDialog.Paste }
             GhostButton("Export all") {
@@ -115,24 +115,24 @@ fun PresetsScreen() {
                 exportLauncher.launch("eqv-presets.json")
             }
         }
-        if (PresetOps.isModified(s)) {
-            val active = PresetOps.find(s, s.activePresetId)
-            Hint("Current look has unsaved edits" + (active?.let { " on \"${it.name}\"" } ?: "") + ".")
-            if (active != null && !active.builtIn) {
-                Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-                    GhostButton("Update \"${active.name}\"") { repo.update { PresetOps.overwrite(it, active.id) } }
-                }
+        Hint("Changes save automatically to the preset you're on. \"Save as new\" keeps a separate copy.")
+        val active = PresetOps.find(s, s.activePresetId)
+        if (active != null && PresetOps.isEdited(s, active.id)) {
+            Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                GhostButton("Reset \"${active.name}\" to original") { repo.update { PresetOps.resetBuiltIn(it, active.id) } }
             }
         }
         val sections = buildList {
             if (s.userPresets.isNotEmpty()) add("My presets" to s.userPresets)
-            for (g in BuiltInPresets.groups) add(g.name to g.presets)
+            for (g in BuiltInPresets.groups) add(g.name to g.presets.map { PresetOps.find(s, it.id) ?: it })
         }
         for ((title, list) in sections) for ((i, p) in list.withIndex()) {
             if (i == 0) SectionTitle(title)
             PresetRow(
                 p = p,
                 active = p.id == s.activePresetId,
+                edited = PresetOps.isEdited(s, p.id),
+                onReset = { repo.update { PresetOps.resetBuiltIn(it, p.id) } },
                 onApply = { repo.update { PresetOps.apply(it, p.id) } },
                 onRename = { dialog = PresetDialog.Rename(p) },
                 onDuplicate = { repo.update { PresetOps.duplicate(it, p.id) } },
@@ -168,6 +168,8 @@ fun PresetsScreen() {
 private fun PresetRow(
     p: Preset,
     active: Boolean,
+    edited: Boolean,
+    onReset: () -> Unit,
     onApply: () -> Unit,
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
@@ -184,7 +186,7 @@ private fun PresetRow(
         Spacer(Modifier.size(14.dp))
         Column(Modifier.weight(1f)) {
             Text(p.name, style = MaterialTheme.typography.titleMedium)
-            Text(describe(p), style = MaterialTheme.typography.bodySmall)
+            Text(describe(p, edited), style = MaterialTheme.typography.bodySmall)
         }
         Box {
             Text(
@@ -195,6 +197,7 @@ private fun PresetRow(
             )
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 if (!p.builtIn) DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; onRename() })
+                if (edited) DropdownMenuItem(text = { Text("Reset to original") }, onClick = { menu = false; onReset() })
                 DropdownMenuItem(text = { Text("Duplicate") }, onClick = { menu = false; onDuplicate() })
                 DropdownMenuItem(text = { Text("Export file") }, onClick = { menu = false; onExport() })
                 DropdownMenuItem(text = { Text("Copy JSON") }, onClick = { menu = false; onCopy() })
@@ -204,7 +207,7 @@ private fun PresetRow(
     }
 }
 
-private fun describe(p: Preset): String {
+private fun describe(p: Preset, edited: Boolean): String {
     val l = p.look
     val layers = listOfNotNull(
         "edge".takeIf { l.edge.enabled },
@@ -215,7 +218,7 @@ private fun describe(p: Preset): String {
         "${l.filter.style.name.lowercase().replace('_', ' ')} filter".takeIf { l.filter.enabled },
     ).joinToString(" + ").ifEmpty { "no layers" }
     val extras = listOfNotNull("haptics".takeIf { l.haptics.enabled }, "shake".takeIf { l.thump.enabled })
-    return (if (p.builtIn) "Built-in · " else "") + layers + if (extras.isNotEmpty()) " · " + extras.joinToString() else ""
+    return (if (p.builtIn) (if (edited) "Built-in, edited · " else "Built-in · ") else "") + layers + if (extras.isNotEmpty()) " · " + extras.joinToString() else ""
 }
 
 @Composable

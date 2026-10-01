@@ -10,7 +10,9 @@ import java.util.UUID
 
 /** Pure preset operations on [AppSettings]; the UI and service call these through the repo. */
 object PresetOps {
-    fun allPresets(s: AppSettings): List<Preset> = BuiltInPresets.all + s.userPresets
+    /** Built-ins (with your edits applied) followed by your own presets. */
+    fun allPresets(s: AppSettings): List<Preset> =
+        BuiltInPresets.all.map { p -> s.presetEdits[p.id]?.let { p.copy(look = it) } ?: p } + s.userPresets
 
     fun find(s: AppSettings, id: String): Preset? = allPresets(s).firstOrNull { it.id == id }
 
@@ -26,17 +28,38 @@ object PresetOps {
         return apply(s, all[(idx + 1).mod(all.size)].id)
     }
 
-    /** True when the current look differs from the active preset's saved look. */
-    fun isModified(s: AppSettings): Boolean = find(s, s.activePresetId)?.look != s.look
+    /**
+     * Auto-save: writes the current look into the active preset, so tweaks are never lost when
+     * switching presets. Built-ins keep the edit in [AppSettings.presetEdits] (resettable);
+     * an edit that matches the original again clears itself.
+     */
+    fun syncActive(s: AppSettings): AppSettings {
+        val id = s.activePresetId
+        val builtIn = BuiltInPresets.byId(id)
+        if (builtIn != null) {
+            val stored = s.presetEdits[id] ?: builtIn.look
+            if (stored == s.look) return s
+            return s.copy(presetEdits = if (s.look == builtIn.look) s.presetEdits - id else s.presetEdits + (id to s.look))
+        }
+        val user = s.userPresets.firstOrNull { it.id == id } ?: return s
+        if (user.look == s.look) return s
+        return s.copy(userPresets = s.userPresets.map { if (it.id == id) it.copy(look = s.look) else it })
+    }
+
+    /** True when a built-in preset carries your edits. */
+    fun isEdited(s: AppSettings, id: String): Boolean = id in s.presetEdits
+
+    /** Drops your edits to a built-in; if it's active, the original look comes back. */
+    fun resetBuiltIn(s: AppSettings, id: String): AppSettings {
+        val original = BuiltInPresets.byId(id) ?: return s
+        val cleared = s.copy(presetEdits = s.presetEdits - id)
+        return if (s.activePresetId == id) cleared.copy(look = original.look) else cleared
+    }
 
     fun saveAsNew(s: AppSettings, name: String): AppSettings {
         val p = Preset(id = newId(), name = uniqueName(s, name.ifBlank { "My preset" }), look = s.look)
         return s.copy(userPresets = s.userPresets + p, activePresetId = p.id)
     }
-
-    /** Overwrites a user preset with the current look (built-ins are read-only). */
-    fun overwrite(s: AppSettings, id: String): AppSettings =
-        s.copy(userPresets = s.userPresets.map { if (it.id == id) it.copy(look = s.look) else it })
 
     fun rename(s: AppSettings, id: String, name: String): AppSettings =
         s.copy(userPresets = s.userPresets.map { if (it.id == id) it.copy(name = name.ifBlank { it.name }) else it })
@@ -48,9 +71,10 @@ object PresetOps {
     }
 
     fun delete(s: AppSettings, id: String): AppSettings {
-        val remaining = s.userPresets.filterNot { it.id == id }
-        val active = if (s.activePresetId == id) BuiltInPresets.DEFAULT_ID else s.activePresetId
-        return s.copy(userPresets = remaining, activePresetId = active)
+        val remaining = s.copy(userPresets = s.userPresets.filterNot { it.id == id })
+        // Deleting the active preset switches to the default (look included, or auto-save
+        // would copy the deleted look into it).
+        return if (s.activePresetId == id) apply(remaining, BuiltInPresets.DEFAULT_ID) else remaining
     }
 
     // ------------------------------------------------------------ import / export

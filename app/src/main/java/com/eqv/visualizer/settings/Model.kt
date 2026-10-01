@@ -18,6 +18,8 @@ data class AppSettings(
     val look: Look = Look(),
     val activePresetId: String = BuiltInPresets.DEFAULT_ID,
     val userPresets: List<Preset> = emptyList(),
+    /** Your edits to built-in presets, by preset id (built-ins themselves are code, read-only). */
+    val presetEdits: Map<String, Look> = emptyMap(),
     val behavior: Behavior = Behavior(),
     val performance: Performance = Performance(),
     val debug: DebugOptions = DebugOptions(),

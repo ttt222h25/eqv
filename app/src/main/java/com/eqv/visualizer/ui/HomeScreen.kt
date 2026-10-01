@@ -167,7 +167,7 @@ fun HomeScreen(go: (Screen) -> Unit) {
         }
 
         // ---- presets
-        SectionTitle("Preset" + if (PresetOps.isModified(s)) " · edited" else "")
+        SectionTitle("Preset" + if (PresetOps.isEdited(s, s.activePresetId)) " · edited" else "")
         PresetPicker(s) { id -> repo.update { PresetOps.apply(it, id) } }
 
         // ---- HQ capture

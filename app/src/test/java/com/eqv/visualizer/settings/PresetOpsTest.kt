@@ -51,13 +51,50 @@ class PresetOpsTest {
     }
 
     @Test
-    fun nextCyclesAndModifiedFlag() {
-        var s = AppSettings()
-        assertFalse(PresetOps.isModified(s))
-        s = PresetOps.next(s)
+    fun nextCycles() {
+        val s = PresetOps.next(AppSettings())
         assertEquals(BuiltInPresets.all[1].id, s.activePresetId)
-        s = s.copy(look = s.look.copy(motion = s.look.motion.copy(sensitivity = 2.5f)))
-        assertTrue(PresetOps.isModified(s))
+        assertEquals(BuiltInPresets.all[1].look, s.look)
+    }
+
+    /** What SettingsRepository.updateLook does: edit, then auto-save into the active preset. */
+    private fun edit(s: AppSettings, t: (Look) -> Look) = PresetOps.syncActive(s.copy(look = t(s.look)))
+
+    @Test
+    fun editsToBuiltInsSurviveSwitchingAndReset() {
+        var s = PresetOps.apply(AppSettings(), "builtin.club")
+        s = edit(s) { it.copy(motion = it.motion.copy(sensitivity = 2.5f)) }
+        assertTrue(PresetOps.isEdited(s, "builtin.club"))
+        s = PresetOps.apply(s, "builtin.calm")
+        assertFalse(PresetOps.isEdited(s, "builtin.calm"))
+        s = PresetOps.apply(s, "builtin.club")
+        assertEquals(2.5f, s.look.motion.sensitivity)
+        // Editing back to the original clears the edit.
+        val original = BuiltInPresets.byId("builtin.club")!!.look
+        assertFalse(PresetOps.isEdited(edit(s) { original }, "builtin.club"))
+        s = PresetOps.resetBuiltIn(s, "builtin.club")
+        assertFalse(PresetOps.isEdited(s, "builtin.club"))
+        assertEquals(original, s.look)
+    }
+
+    @Test
+    fun editsToUserPresetsAutoSave() {
+        var s = PresetOps.saveAsNew(AppSettings(), "Mine")
+        val id = s.activePresetId
+        s = edit(s) { it.copy(bars = it.bars.copy(height = 0.3f)) }
+        s = PresetOps.apply(PresetOps.apply(s, BuiltInPresets.DEFAULT_ID), id)
+        assertEquals(0.3f, s.look.bars.height)
+        assertTrue(s.presetEdits.isEmpty())
+    }
+
+    @Test
+    fun deletingActivePresetDoesNotLeakItsLook() {
+        var s = PresetOps.saveAsNew(AppSettings(), "Mine")
+        s = edit(s) { it.copy(bars = it.bars.copy(height = 0.3f)) }
+        s = PresetOps.delete(s, s.activePresetId)
+        assertEquals(BuiltInPresets.DEFAULT_ID, s.activePresetId)
+        assertEquals(BuiltInPresets.byId(BuiltInPresets.DEFAULT_ID)!!.look, s.look)
+        assertEquals(s, PresetOps.syncActive(s))
     }
 
     @Test
