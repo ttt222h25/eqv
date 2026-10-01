@@ -39,6 +39,7 @@ data class Look(
     val radial: RadialLayer = RadialLayer(),
     val wave: WaveLayer = WaveLayer(),
     val pulse: PulseLayer = PulseLayer(),
+    val filter: FilterLayer = FilterLayer(),
     val motion: Motion = Motion(),
     val beat: BeatConfig = BeatConfig(),
     val haptics: Haptics = Haptics(),
@@ -195,6 +196,111 @@ data class PulseLayer(
     val size: Float = 0.55f,
 )
 
+// ---------------------------------------------------------------- screen filter
+
+@Serializable
+enum class FilterStyle { CRT, VHS, FILM, NIGHT_VISION, POCKET_LCD, DOT_MATRIX, GLITCH, CUSTOM }
+
+/** What the filter does on a beat (replaces the overlay shake as the "hit"). */
+@Serializable
+enum class BeatFx { NONE, FLICKER, SCAN_JUMP, GLITCH, GRAIN_BURST, VIGNETTE_PUMP }
+
+/**
+ * Full-screen filter drawn over everything, Opera GX style. Android doesn't let an app change
+ * other apps' pixels, so every component is light or shade drawn on top: lines, RGB stripes,
+ * a pixel grid, grain, vignette, a color wash. Each amount is 0..1, 0 = off.
+ * [FilterStyles] holds the starting points; [style] only labels which one was picked.
+ */
+@Serializable
+data class FilterLayer(
+    val enabled: Boolean = false,
+    val style: FilterStyle = FilterStyle.CRT,
+    /** Master strength, multiplies every component. */
+    val amount: Float = 1f,
+    val scanlines: Float = 0f,
+    /** Distance between scanlines in dp. */
+    val scanlineDp: Float = 3f,
+    /** Scanline drift in lines per second. */
+    val scanlineRoll: Float = 0f,
+    /** RGB aperture-grille stripes. */
+    val mask: Float = 0f,
+    /** Width of one R/G/B stripe in dp. */
+    val maskDp: Float = 1.5f,
+    /** Dark gaps between "pixels" (dot matrix / LCD). */
+    val grid: Float = 0f,
+    val gridDp: Float = 5f,
+    /** Round dots (dot matrix) or square cells (LCD). */
+    val gridRound: Boolean = true,
+    /** Dark corners. */
+    val vignette: Float = 0f,
+    /** Rounded tube edge shadow + glass highlight (fakes CRT curvature). */
+    val bezel: Float = 0f,
+    val tint: Int = NothingColors.WHITE,
+    /** Color wash strength (it lightens dark areas too, so keep it low). */
+    val tintAmount: Float = 0f,
+    val grain: Float = 0f,
+    /** How often the grain pattern changes per second (film is 24). */
+    val grainFps: Float = 24f,
+    /** Bright band rolling down the screen. */
+    val rollBar: Float = 0f,
+    /** Roll bar speed in screens per second. */
+    val rollSpeed: Float = 0.1f,
+    /** Constant random brightness flicker. */
+    val flicker: Float = 0f,
+    /** VHS tracking noise at the bottom + a wandering noise line. */
+    val tracking: Float = 0f,
+    /** How much the bass level boosts the filter (0 = static). */
+    val bassDrive: Float = 0.3f,
+    val beatFx: BeatFx = BeatFx.NONE,
+    val beatFxStrength: Float = 0.6f,
+    val beatFxMs: Float = 220f,
+)
+
+/** Starting points for each [FilterStyle]. */
+object FilterStyles {
+    fun of(style: FilterStyle): FilterLayer = when (style) {
+        FilterStyle.CRT -> FilterLayer(
+            enabled = true, style = style,
+            scanlines = 0.5f, scanlineDp = 3f, mask = 0.25f, maskDp = 1.5f,
+            vignette = 0.35f, bezel = 0.55f, grain = 0.08f, rollBar = 0.25f, rollSpeed = 0.08f, flicker = 0.08f,
+            bassDrive = 0.25f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.6f, beatFxMs = 200f,
+        )
+        FilterStyle.VHS -> FilterLayer(
+            enabled = true, style = style,
+            scanlines = 0.25f, scanlineDp = 4f, vignette = 0.3f, tint = 0xFFFFD9B0.toInt(), tintAmount = 0.06f,
+            grain = 0.35f, grainFps = 30f, tracking = 0.6f, rollBar = 0.12f, rollSpeed = 0.05f, flicker = 0.05f,
+            bassDrive = 0.3f, beatFx = BeatFx.GLITCH, beatFxStrength = 0.7f, beatFxMs = 240f,
+        )
+        FilterStyle.FILM -> FilterLayer(
+            enabled = true, style = style,
+            vignette = 0.5f, tint = 0xFFFFC98A.toInt(), tintAmount = 0.1f, grain = 0.45f, grainFps = 24f, flicker = 0.15f,
+            bassDrive = 0.2f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 160f,
+        )
+        FilterStyle.NIGHT_VISION -> FilterLayer(
+            enabled = true, style = style,
+            scanlines = 0.25f, scanlineDp = 2.5f, vignette = 0.85f, tint = 0xFF39FF6A.toInt(), tintAmount = 0.22f,
+            grain = 0.55f, grainFps = 30f, flicker = 0.06f,
+            bassDrive = 0.3f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 180f,
+        )
+        FilterStyle.POCKET_LCD -> FilterLayer(
+            enabled = true, style = style,
+            grid = 0.45f, gridDp = 4f, gridRound = false, vignette = 0.15f, tint = 0xFF9BBC0F.toInt(), tintAmount = 0.25f,
+            bassDrive = 0f, beatFx = BeatFx.NONE,
+        )
+        FilterStyle.DOT_MATRIX -> FilterLayer(
+            enabled = true, style = style,
+            grid = 0.6f, gridDp = 5f, gridRound = true, vignette = 0.2f,
+            bassDrive = 0.2f, beatFx = BeatFx.VIGNETTE_PUMP, beatFxStrength = 0.5f, beatFxMs = 260f,
+        )
+        FilterStyle.GLITCH -> FilterLayer(
+            enabled = true, style = style,
+            scanlines = 0.2f, scanlineDp = 2f, mask = 0.15f, grain = 0.2f, grainFps = 30f, tracking = 0.2f,
+            bassDrive = 0.4f, beatFx = BeatFx.GLITCH, beatFxStrength = 1f, beatFxMs = 260f,
+        )
+        FilterStyle.CUSTOM -> FilterLayer(enabled = true, style = style)
+    }
+}
+
 // ---------------------------------------------------------------- dynamics
 
 @Serializable
@@ -340,6 +446,13 @@ fun Look.sanitized(): Look = copy(
         attackMs = motion.attackMs.coerceIn(1f, 1000f),
         decayMs = motion.decayMs.coerceIn(1f, 3000f),
         rangeDb = motion.rangeDb.coerceIn(12f, 90f),
+    ),
+    filter = filter.copy(
+        scanlineDp = filter.scanlineDp.coerceIn(1f, 12f),
+        maskDp = filter.maskDp.coerceIn(0.5f, 6f),
+        gridDp = filter.gridDp.coerceIn(2f, 16f),
+        grainFps = filter.grainFps.coerceIn(1f, 60f),
+        beatFxMs = filter.beatFxMs.coerceIn(40f, 1000f),
     ),
 )
 

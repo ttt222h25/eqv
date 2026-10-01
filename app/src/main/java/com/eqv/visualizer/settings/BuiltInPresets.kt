@@ -29,6 +29,9 @@ object BuiltInPresets {
     private const val ORANGE = 0xFFFF6A1A.toInt()
     private const val GOLD = 0xFFFFC857.toInt()
     private const val CANDLE = 0xFFFF9A3C.toInt()
+    private const val GB_DARK = 0xFF306230.toInt()
+    private const val GB_MID = 0xFF8BAC0F.toInt()
+    private const val GB_LIGHT = 0xFFCADC9F.toInt()
 
     private fun solid(c: Int, glow: Float = 0.5f, opacity: Float = 1f) =
         ColorSpec(mode = ColorMode.SOLID, primary = c, glow = glow, opacity = opacity)
@@ -109,6 +112,114 @@ object BuiltInPresets {
                         ),
                         pulse = PulseLayer(color = album(), strength = 0.25f),
                         motion = Motion(bandCount = 40, sensitivity = 1.15f),
+                    ),
+                ),
+            ),
+        ),
+        PresetGroup(
+            "Filters",
+            listOf(
+                // Old TV: scanlines, RGB stripes, dark tube edge, a rolling bar; scanlines jump on the kick.
+                p(
+                    "crt", "CRT TV",
+                    Look(
+                        edge = EdgeLayer(enabled = false),
+                        bars = BarsLayer(
+                            height = 0.09f, thickness = 0.6f, cornerRadiusDp = 2f, marginDp = 18f, span = 0.86f,
+                            color = gradient(white, AMBER, glow = 0.6f, opacity = 0.85f),
+                        ),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.CRT),
+                        motion = Motion(bandCount = 28, attackMs = 15f, decayMs = 220f),
+                    ),
+                ),
+                // Worn tape: grain, tracking noise at the bottom, glitch bands on beats.
+                p(
+                    "vhs", "VHS Tape",
+                    Look(
+                        edge = EdgeLayer(enabled = false),
+                        bars = off,
+                        wave = WaveLayer(
+                            enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
+                            color = solid(white, glow = 0.5f, opacity = 0.8f),
+                            positionY = 0.82f, amplitude = 0.06f, thicknessDp = 2f, smoothness = 0.4f,
+                        ),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.VHS),
+                        motion = Motion(bandCount = 32, attackMs = 10f, decayMs = 200f),
+                    ),
+                ),
+                // Projector: grain at 24 fps, sepia wash, heavy vignette, flicker on the beat.
+                p(
+                    "film", "Old Film",
+                    Look(
+                        edge = EdgeLayer(
+                            color = solid(CANDLE, glow = 0.8f, opacity = 0.4f),
+                            thicknessDp = 1f, glowWidthDp = 30f, reactivity = 0.2f, idleLevel = 0.08f, cutoutRing = false,
+                        ),
+                        bars = off,
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.FILM),
+                        motion = Motion(bandCount = 16, attackMs = 40f, decayMs = 500f),
+                        beat = BeatConfig(sensitivity = 0.5f, rippleStrength = 0.3f),
+                    ),
+                ),
+                p(
+                    "nightvision", "Night Vision",
+                    Look(
+                        edge = EdgeLayer(enabled = false),
+                        bars = off,
+                        wave = WaveLayer(
+                            enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
+                            color = solid(PHOSPHOR, glow = 0.9f),
+                            positionY = 0.78f, amplitude = 0.07f, thicknessDp = 2f, smoothness = 0.35f,
+                        ),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.NIGHT_VISION),
+                        motion = Motion(bandCount = 32, attackMs = 8f, decayMs = 160f),
+                    ),
+                ),
+                // Handheld console LCD: olive wash, square pixel grid, four-shade green bars.
+                p(
+                    "pocket", "Pocket",
+                    Look(
+                        edge = EdgeLayer(enabled = false),
+                        bars = BarsLayer(
+                            style = BarsStyle.BLOCKS, height = 0.14f, thickness = 0.85f, cornerRadiusDp = 0f, span = 0.9f, marginDp = 12f,
+                            color = bands(GB_DARK, GB_MID, GB_LIGHT, glow = 0.1f),
+                        ),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.POCKET_LCD),
+                        motion = Motion(bandCount = 12, attackMs = 5f, decayMs = 160f, peakHoldMs = 500f),
+                    ),
+                ),
+                // Nothing-style perforated dot screen; the vignette closes in on the kick.
+                p(
+                    "dotmatrix", "Dot Matrix",
+                    Look(
+                        edge = EdgeLayer(enabled = false),
+                        bars = BarsLayer(
+                            style = BarsStyle.DOTS, mirror = true, height = 0.14f, thickness = 0.8f,
+                            color = bands(red, white, white, glow = 0.3f),
+                        ),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.DOT_MATRIX),
+                        motion = Motion(bandCount = 24, decayMs = 200f),
+                    ),
+                ),
+                p(
+                    "glitch", "Glitch",
+                    Look(
+                        edge = EdgeLayer(
+                            style = EdgeStyle.SPLIT,
+                            color = gradient(MAGENTA, CYAN, glow = 0.8f),
+                            thicknessDp = 3f, glowWidthDp = 30f, length = 0.4f, reactivity = 0.6f,
+                        ),
+                        bars = off,
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.GLITCH),
+                        motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 8f, decayMs = 150f),
+                        beat = BeatConfig(sensitivity = 0.65f, cooldownMs = 160f, rippleStrength = 0.8f),
                     ),
                 ),
             ),
@@ -239,14 +350,13 @@ object BuiltInPresets {
                             position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.BLOCKS, mirror = true, height = 0.09f,
                             color = ColorSpec(mode = ColorMode.RAINBOW, rainbowSpeed = 0.2f, glow = 0.6f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.FLASH, strength = 0.22f, decayMs = 160f),
+                        pulse = PulseLayer(style = PulseStyle.VIGNETTE, strength = 0.3f, decayMs = 200f),
                         motion = Motion(bandCount = 48, sensitivity = 1.3f, attackMs = 10f, decayMs = 160f),
                         beat = BeatConfig(sensitivity = 0.65f, rippleStrength = 0.9f),
                         haptics = Haptics(enabled = true, intensity = 0.8f),
-                        thump = Thump(enabled = true, strength = 0.7f),
                     ),
                 ),
-                // Everything on: fast rainbow, side bars, white strobe-ish flash, thump + sharp haptics.
+                // Everything on: fast rainbow, side bars, glitch bands on every beat, sharp haptics.
                 p(
                     "rave", "Rave",
                     Look(
@@ -259,11 +369,11 @@ object BuiltInPresets {
                             position = BarsPosition.SIDES, style = BarsStyle.BLOCKS, mirror = true, height = 0.12f, thickness = 0.7f,
                             color = rainbow(0.45f, glow = 0.7f),
                         ),
-                        pulse = PulseLayer(style = PulseStyle.FLASH, color = solid(white), strength = 0.2f, decayMs = 110f),
+                        pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.GLITCH).copy(scanlines = 0f, mask = 0f, grain = 0.1f),
                         motion = Motion(bandCount = 40, sensitivity = 1.4f, attackMs = 8f, decayMs = 130f),
                         beat = BeatConfig(sensitivity = 0.7f, cooldownMs = 150f, rippleStrength = 1f),
                         haptics = Haptics(enabled = true, intensity = 0.85f, pattern = HapticPattern.SHARP),
-                        thump = Thump(enabled = true, strength = 0.8f, durationMs = 120f, chromatic = 0.9f),
                     ),
                 ),
                 // Mirror ball: spinning dot ring in the middle, rings on every kick.
@@ -302,7 +412,6 @@ object BuiltInPresets {
                         pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(MAGENTA), strength = 0.3f, decayMs = 220f),
                         motion = Motion(bandCount = 48, sensitivity = 1.2f, attackMs = 15f, decayMs = 200f),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.75f),
-                        thump = Thump(enabled = true, strength = 0.45f),
                     ),
                 ),
                 // Concert lights: white spotlight vignette, bars hanging from the top like a lighting rig.
@@ -322,7 +431,6 @@ object BuiltInPresets {
                         motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 12f, decayMs = 220f),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.8f),
                         haptics = Haptics(enabled = true, intensity = 0.7f),
-                        thump = Thump(enabled = true, strength = 0.55f, chromatic = 0.3f),
                     ),
                 ),
             ),
@@ -344,7 +452,6 @@ object BuiltInPresets {
                         motion = Motion(bandCount = 24, sensitivity = 1.3f, attackMs = 8f, decayMs = 260f, bassWeight = 1.4f, trebleWeight = 0.8f),
                         beat = BeatConfig(sensitivity = 0.6f, cooldownMs = 220f, rippleStrength = 1f, lowHz = 30f, highHz = 120f),
                         haptics = Haptics(enabled = true, intensity = 1f, minStrength = 0.3f, pattern = HapticPattern.RUMBLE),
-                        thump = Thump(enabled = true, strength = 0.9f, durationMs = 170f, chromatic = 0.8f),
                     ),
                 ),
                 // Loud and blocky; phone kicks in your hand on every beat.
@@ -363,7 +470,6 @@ object BuiltInPresets {
                         motion = Motion(bandCount = 24, sensitivity = 1.35f, attackMs = 10f, decayMs = 170f, bassWeight = 1.2f),
                         beat = BeatConfig(sensitivity = 0.65f, rippleStrength = 0.9f),
                         haptics = Haptics(enabled = true, intensity = 0.9f, minStrength = 0.3f, pattern = HapticPattern.KICK),
-                        thump = Thump(enabled = true, strength = 0.65f),
                     ),
                 ),
                 // 808s: purple glow, long rumble, tuned to the sub-bass.
@@ -383,7 +489,6 @@ object BuiltInPresets {
                         motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 12f, decayMs = 320f, minHz = 25f, bassWeight = 1.35f),
                         beat = BeatConfig(sensitivity = 0.55f, cooldownMs = 240f, rippleStrength = 0.9f, lowHz = 25f, highHz = 100f),
                         haptics = Haptics(enabled = true, intensity = 0.9f, pattern = HapticPattern.RUMBLE),
-                        thump = Thump(enabled = true, strength = 0.6f, durationMs = 180f),
                     ),
                 ),
             ),
@@ -500,6 +605,7 @@ object BuiltInPresets {
                         ),
                         pulse = noPulse,
                         motion = Motion(bandCount = 16, sensitivity = 1.2f, attackMs = 5f, decayMs = 140f, peakHoldMs = 600f, peakFallPerSec = 1.4f),
+                        filter = FilterStyles.of(FilterStyle.CRT).copy(scanlines = 0.4f, mask = 0.2f, bezel = 0.4f, rollBar = 0.15f, beatFx = BeatFx.NONE),
                         beat = BeatConfig(sensitivity = 0.6f, rippleStrength = 0.6f),
                         haptics = Haptics(enabled = true, intensity = 0.5f, pattern = HapticPattern.SHARP),
                     ),
@@ -522,9 +628,12 @@ object BuiltInPresets {
                             positionY = 0.72f, amplitude = 0.04f, thicknessDp = 2f, smoothness = 0.7f,
                         ),
                         pulse = PulseLayer(style = PulseStyle.VIGNETTE, color = solid(MAGENTA), strength = 0.25f, decayMs = 300f),
+                        filter = FilterLayer(
+                            enabled = true, style = FilterStyle.CUSTOM, scanlines = 0.3f, scanlineDp = 3f, vignette = 0.3f,
+                            rollBar = 0.2f, rollSpeed = 0.06f, bassDrive = 0.3f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.5f,
+                        ),
                         motion = Motion(bandCount = 40, sensitivity = 1.15f, attackMs = 15f, decayMs = 240f),
                         beat = BeatConfig(sensitivity = 0.55f, rippleStrength = 0.7f),
-                        thump = Thump(enabled = true, strength = 0.4f, chromatic = 1f),
                     ),
                 ),
                 // Lab oscilloscope: green raw waveform across the middle.
@@ -539,6 +648,7 @@ object BuiltInPresets {
                             positionY = 0.5f, amplitude = 0.12f, thicknessDp = 2f, smoothness = 0.3f,
                         ),
                         pulse = noPulse,
+                        filter = FilterStyles.of(FilterStyle.CRT).copy(mask = 0f, tint = PHOSPHOR, tintAmount = 0.05f, beatFx = BeatFx.NONE),
                         motion = Motion(bandCount = 32, attackMs = 5f, decayMs = 120f),
                         beat = BeatConfig(rippleStrength = 0.3f),
                     ),

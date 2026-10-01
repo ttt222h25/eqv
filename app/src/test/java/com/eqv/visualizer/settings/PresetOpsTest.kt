@@ -61,9 +61,18 @@ class PresetOpsTest {
     }
 
     @Test
+    fun filterStylesAreSane() {
+        for (st in FilterStyle.entries) {
+            val f = FilterStyles.of(st)
+            assertTrue(st.name, f.enabled && f.style == st)
+            assertEquals(st.name, f, Look(filter = f).sanitized().filter)
+        }
+    }
+
+    @Test
     fun builtInsAreValid() {
         val all = BuiltInPresets.all
-        assertTrue(all.size >= 25)
+        assertTrue(all.size >= 30)
         assertEquals(BuiltInPresets.DEFAULT_ID, all.first().id)
         assertEquals(all.size, all.map { it.id }.toSet().size)
         assertEquals(all.size, all.map { it.name.lowercase() }.toSet().size)
@@ -77,6 +86,12 @@ class PresetOpsTest {
             }
             assertTrue(p.name, l.pulse.strength in 0f..1f && l.haptics.intensity in 0f..1f && l.thump.strength in 0f..1f)
             assertTrue(p.name, l.beat.lowHz < l.beat.highHz)
+            val f = l.filter
+            for (v in listOf(f.amount, f.scanlines, f.mask, f.grid, f.vignette, f.bezel, f.grain, f.rollBar, f.flicker, f.tracking, f.bassDrive, f.beatFxStrength)) {
+                assertTrue(p.name, v in 0f..1f)
+            }
+            assertTrue(p.name, f.tintAmount in 0f..0.4f)
+            assertFalse(p.name + " uses the classic shake", l.thump.enabled)
             assertTrue(p.name, l.edge.enabled || l.bars.enabled || l.radial.enabled || l.wave.enabled)
         }
         val json = PresetOps.export(all)

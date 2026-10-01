@@ -26,6 +26,7 @@ class VisualRenderer(private val ring: FrameRing) {
     private val radial = RadialLayerRenderer()
     private val wave = WaveLayerRenderer()
     private val pulse = PulseLayerRenderer()
+    private val filter = FilterRenderer()
     val hud = DebugHud()
 
     /** Called on each newly seen (delayed) beat: strength 0..1 and whether a Thump fired. */
@@ -89,11 +90,14 @@ class VisualRenderer(private val ring: FrameRing) {
         bars.draw(canvas, c)
         radial.draw(canvas, c)
         canvas.restore()
+        // The filter sits over everything and stays put: it is the "screen", not a visual.
+        filter.draw(canvas, c)
     }
 
     private fun onNewBeat(c: RenderContext, settings: AppSettings) {
         beatStartSec = c.timeSec
         c.beatStrength = c.frame.beatStrength
+        filter.onBeat(c.timeSec, c.frame.beatStrength)
         val thump = settings.look.thump
         var thumped = false
         if (thump.enabled && c.frame.beatStrength >= thump.minStrength) {

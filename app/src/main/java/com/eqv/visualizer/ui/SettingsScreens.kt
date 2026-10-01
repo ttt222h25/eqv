@@ -22,8 +22,12 @@ import com.eqv.visualizer.haptics.BeatHaptics
 import com.eqv.visualizer.settings.AppFilterMode
 import com.eqv.visualizer.settings.AppSettings
 import com.eqv.visualizer.settings.BarsPosition
+import com.eqv.visualizer.settings.BeatFx
 import com.eqv.visualizer.settings.BarsStyle
 import com.eqv.visualizer.settings.EdgeStyle
+import com.eqv.visualizer.settings.FilterLayer
+import com.eqv.visualizer.settings.FilterStyle
+import com.eqv.visualizer.settings.FilterStyles
 import com.eqv.visualizer.settings.HapticPattern
 import com.eqv.visualizer.settings.Limits
 import com.eqv.visualizer.settings.Look
@@ -242,7 +246,7 @@ fun ThumpScreen() {
     val t = s.look.thump
     fun edit(f: (com.eqv.visualizer.settings.Thump) -> com.eqv.visualizer.settings.Thump) = repo.updateLook { it.copy(thump = f(it.thump)) }
     ScrollColumn {
-        Hint("Android can't move other apps without root. Thump fakes it: a quick scale/offset pulse of the visuals, a chromatic edge flash and a haptic hit, together.")
+        Hint("The classic shake: only the visuals move (Android can't move other apps without root). For hits that feel like the whole screen, use Filter → On the beat instead.")
         SwitchRow("Thump", t.enabled) { v -> edit { it.copy(enabled = v) } }
         SliderRow("Strength", t.strength, 0f..1f, ::fmtPct) { v -> edit { it.copy(strength = v) } }
         SliderRow("Duration", t.durationMs, 40f..500f, ::fmtMs) { v -> edit { it.copy(durationMs = v) } }
@@ -251,6 +255,76 @@ fun ThumpScreen() {
         SliderRow("Chromatic split", t.chromatic, 0f..1f, ::fmtPct) { v -> edit { it.copy(chromatic = v) } }
         SwitchRow("Haptic hit", t.withHaptic, "Fire the haptic with every thump, even if beat haptics are off") { v -> edit { it.copy(withHaptic = v) } }
         SwitchRow("Real shake in preview", t.realShakeInPreview, "The preview above shakes the whole simulated screen for real") { v -> edit { it.copy(realShakeInPreview = v) } }
+    }
+}
+
+// ============================================================================ filter
+
+private fun filterName(st: FilterStyle) = when (st) {
+    FilterStyle.CRT -> "CRT"
+    FilterStyle.VHS -> "VHS"
+    FilterStyle.FILM -> "Film"
+    FilterStyle.NIGHT_VISION -> "Night vision"
+    FilterStyle.POCKET_LCD -> "Pocket LCD"
+    FilterStyle.DOT_MATRIX -> "Dot matrix"
+    FilterStyle.GLITCH -> "Glitch"
+    FilterStyle.CUSTOM -> "Custom"
+}
+
+private fun beatFxName(fx: BeatFx) = when (fx) {
+    BeatFx.NONE -> "None"
+    BeatFx.FLICKER -> "Flicker"
+    BeatFx.SCAN_JUMP -> "Scan jump"
+    BeatFx.GLITCH -> "Glitch"
+    BeatFx.GRAIN_BURST -> "Grain burst"
+    BeatFx.VIGNETTE_PUMP -> "Vignette pump"
+}
+
+@Composable
+fun FilterScreen() {
+    val (s, repo) = rememberSettings()
+    val f = s.look.filter
+    // Any manual tweak turns the label into Custom so it's clear it no longer matches a style.
+    fun edit(t: (FilterLayer) -> FilterLayer) = repo.updateLook { it.copy(filter = t(it.filter).copy(style = FilterStyle.CUSTOM)) }
+    ScrollColumn {
+        Hint("A filter over the whole screen, like Opera GX. Android won't let apps change other apps' pixels, so it's drawn on top: lines, stripes, grain, shade and a color wash. No bending or blur.")
+        SwitchRow("Screen filter", f.enabled) { v -> repo.updateLook { it.copy(filter = it.filter.copy(enabled = v)) } }
+        ChoiceRow("Style", FilterStyle.entries.filter { it != FilterStyle.CUSTOM || f.style == FilterStyle.CUSTOM }, f.style, ::filterName) { st ->
+            if (st != FilterStyle.CUSTOM) repo.updateLook { it.copy(filter = FilterStyles.of(st).copy(amount = it.filter.amount)) }
+        }
+        SliderRow("Strength", f.amount, 0f..1f, ::fmtPct) { v -> repo.updateLook { it.copy(filter = it.filter.copy(amount = v)) } }
+
+        SectionTitle("On the beat")
+        ChoiceRow("Hit", BeatFx.entries, f.beatFx, ::beatFxName) { v -> edit { it.copy(beatFx = v) } }
+        SliderRow("Hit strength", f.beatFxStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(beatFxStrength = v) } }
+        SliderRow("Hit length", f.beatFxMs, 60f..600f, ::fmtMs) { v -> edit { it.copy(beatFxMs = v) } }
+        SliderRow("Bass drive", f.bassDrive, 0f..1f, { if (it < 0.02f) "static" else fmtPct(it) }) { v -> edit { it.copy(bassDrive = v) } }
+
+        SectionTitle("Lines")
+        SliderRow("Scanlines", f.scanlines, 0f..1f, ::fmtPct) { v -> edit { it.copy(scanlines = v) } }
+        SliderRow("Line spacing", f.scanlineDp, 1f..10f, ::fmtDp) { v -> edit { it.copy(scanlineDp = v) } }
+        SliderRow("Line drift", f.scanlineRoll, 0f..20f, { "%.1f lines/s".format(it) }) { v -> edit { it.copy(scanlineRoll = v) } }
+        SliderRow("Roll bar", f.rollBar, 0f..1f, ::fmtPct) { v -> edit { it.copy(rollBar = v) } }
+        SliderRow("Roll speed", f.rollSpeed, 0.01f..0.5f, { "%.2f /s".format(it) }) { v -> edit { it.copy(rollSpeed = v) } }
+
+        SectionTitle("Pixels")
+        SliderRow("RGB stripes", f.mask, 0f..1f, ::fmtPct) { v -> edit { it.copy(mask = v) } }
+        SliderRow("Stripe width", f.maskDp, 0.5f..4f, ::fmtDp) { v -> edit { it.copy(maskDp = v) } }
+        SliderRow("Pixel grid", f.grid, 0f..1f, ::fmtPct) { v -> edit { it.copy(grid = v) } }
+        SliderRow("Grid size", f.gridDp, 2f..14f, ::fmtDp) { v -> edit { it.copy(gridDp = v) } }
+        SwitchRow("Round dots", f.gridRound, "Off = square LCD cells") { v -> edit { it.copy(gridRound = v) } }
+
+        SectionTitle("Light & shade")
+        SliderRow("Vignette", f.vignette, 0f..1f, ::fmtPct) { v -> edit { it.copy(vignette = v) } }
+        SliderRow("Tube edge", f.bezel, 0f..1f, ::fmtPct) { v -> edit { it.copy(bezel = v) } }
+        SliderRow("Color wash", f.tintAmount, 0f..0.4f, ::fmtPct) { v -> edit { it.copy(tintAmount = v) } }
+        ColorRow("Wash color", f.tint) { c -> edit { it.copy(tint = c) } }
+        SliderRow("Flicker", f.flicker, 0f..1f, ::fmtPct) { v -> edit { it.copy(flicker = v) } }
+
+        SectionTitle("Noise")
+        SliderRow("Grain", f.grain, 0f..1f, ::fmtPct) { v -> edit { it.copy(grain = v) } }
+        SliderRow("Grain speed", f.grainFps, 1f..60f, { "${it.roundToInt()} fps" }) { v -> edit { it.copy(grainFps = v) } }
+        SliderRow("VHS tracking", f.tracking, 0f..1f, ::fmtPct) { v -> edit { it.copy(tracking = v) } }
     }
 }
 

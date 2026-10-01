@@ -55,6 +55,9 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
     private val bgPaint = Paint()
     private val blockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1C1C1C.toInt() }
     private val blockRect = RectF()
+    /** The "photo" in the fake app: colorful, so filters (tint, grid, scanlines) read in the preview. */
+    private val photoPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var photoW = -1f
 
     init {
         setLayerType(LAYER_TYPE_NONE, null)
@@ -218,7 +221,14 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
         canvas.drawRoundRect(blockRect, r, r, blockPaint)
         y += g.height * 0.07f
         blockRect.set(pad, y, g.width - pad, y + g.height * 0.22f)
-        canvas.drawRoundRect(blockRect, r, r, blockPaint)
+        if (photoW != g.width) {
+            photoW = g.width
+            photoPaint.shader = LinearGradient(
+                blockRect.left, blockRect.top, blockRect.right, blockRect.bottom,
+                intArrayOf(0xFF2B4C7E.toInt(), 0xFFB0566B.toInt(), 0xFFE8B05C.toInt()), null, Shader.TileMode.CLAMP,
+            )
+        }
+        canvas.drawRoundRect(blockRect, r, r, photoPaint)
         y += g.height * 0.25f
         for (i in 0 until 3) {
             blockRect.set(pad, y, g.width - pad, y + g.height * 0.06f)

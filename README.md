@@ -3,12 +3,13 @@
 A system-wide, click-through music visualizer that runs on top of any app (Spotify, YouTube, anything), in the spirit of Muviz Edge. It has a Nothing-style settings app (black, white, one red accent, dot-matrix headings) with a live preview for every control.
 
 - **Layers** (combine freely, independent settings): edge lighting that follows the real rounded corners and punch-hole, EQ bars (bottom/top/both/sides), radial spectrum, waveform, and beat pulse (vignette/flash/ring).
+- **Screen filters** (Opera GX style): CRT, VHS, film, night vision, pocket LCD, dot matrix, glitch, or custom (scanlines, RGB stripes, pixel grid, tube edge, vignette, color wash, grain, roll bar, VHS tracking). Beat "hits" are filter effects: flicker, scan jump, glitch bands, grain burst, vignette pump. Drawn on top of other apps, since Android doesn't let an app change their pixels.
 - **Beat haptics**: composition primitives (THUD/CLICK/LOW_TICK), with waveform fallbacks.
-- **Thump**: a fake screen shake (scale/offset pulse + chromatic edge flash + haptic). The in-app preview can shake for real.
+- **Shake** (classic, off in all presets): a fake screen shake of the visuals (scale/offset pulse + chromatic edge flash + haptic). The in-app preview can shake for real.
 - **Smart behavior**: auto start/stop with music, which players trigger it, hide in fullscreen or in chosen apps, pause on screen-off/calls/low battery, album-art colors, Quick Settings tiles (toggle and preset), and a notification with on/off + next preset.
 - **Audio**: Visualizer API → microphone fallback chain (with a silence watchdog), optional HQ playback capture, and a demo signal.
 - **DSP**: Hann-windowed FFT (1024/2048, 50% overlap), log bands (8–64), fast-attack/slow-decay smoothing, peak hold, auto-gain, spectral-flux beats with cooldown, and an A/V sync delay per output route.
-- **Presets**: 27 built-in presets in occasion groups (Everyday, Chill, Party, Bass & gym, Night, Focus, Retro & games); save/rename/duplicate/delete; import/export JSON (file or clipboard).
+- **Presets**: 34 built-in presets in occasion groups (Everyday, Filters, Chill, Party, Bass & gym, Night, Focus, Retro & games); save/rename/duplicate/delete; import/export JSON (file or clipboard).
 
 See [PLAN.md](PLAN.md) for the research and architecture, and [IDEAS.md](IDEAS.md) for the backlog.
 
@@ -69,3 +70,4 @@ The render and audio hot loops reuse every buffer; the settings model holds ever
 - **Visuals draw under the status bar and notification shade.** That's where Android places app overlays.
 - **HQ capture** asks for consent every session, shows a red chip, and stops at screen lock (Android 14/15). **Spotify blocks capture** entirely, which is why Auto uses the system Visualizer API.
 - **No real shake of other apps** without root. Thump fakes it.
+- **Filters can't warp, blur or recolor other apps.** They add light and shade on top, so there's no screen curvature and no true black-and-white or night-vision recolor. The color wash also lightens dark areas a little.

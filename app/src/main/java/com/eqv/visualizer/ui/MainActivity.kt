@@ -30,10 +30,11 @@ import com.eqv.visualizer.ui.theme.Nothing
 enum class Screen(val title: String, val preview: Boolean = true) {
     HOME("EQV"),
     LAYERS("Visuals"),
+    FILTER("Filter"),
     MOTION("Motion"),
     BEAT("Beat"),
     HAPTICS("Haptics"),
-    THUMP("Thump"),
+    THUMP("Shake"),
     BEHAVIOR("Behavior", preview = false),
     PERFORMANCE("Performance"),
     PRESETS("Presets"),
@@ -69,6 +70,7 @@ fun App() {
             when (screen) {
                 Screen.HOME -> HomeScreen(go)
                 Screen.LAYERS -> LayersScreen()
+                Screen.FILTER -> FilterScreen()
                 Screen.MOTION -> MotionScreen()
                 Screen.BEAT -> BeatScreen()
                 Screen.HAPTICS -> HapticsScreen()

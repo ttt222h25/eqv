@@ -198,10 +198,11 @@ fun HomeScreen(go: (Screen) -> Unit) {
         Card {
             Column {
                 NavRow("Visuals", "Edge glow, bars, radial, wave, beat pulse") { go(Screen.LAYERS) }
+                NavRow("Filter", "CRT, VHS, film, night vision, LCD, glitch") { go(Screen.FILTER) }
                 NavRow("Motion", "Sensitivity, smoothing, bands, frequency range") { go(Screen.MOTION) }
                 NavRow("Beat", "Detection sensitivity, cooldown, ripple") { go(Screen.BEAT) }
                 NavRow("Haptics", "Beat kicks on the vibration motor") { go(Screen.HAPTICS) }
-                NavRow("Thump", "Fake screen shake: pulse, edge flash, haptic") { go(Screen.THUMP) }
+                NavRow("Shake", "Classic overlay shake (off in all presets)") { go(Screen.THUMP) }
                 NavRow("Behavior", "Auto-start, app filters, pauses, A/V sync") { go(Screen.BEHAVIOR) }
                 NavRow("Performance", "FPS cap, quality, opacity, FPS counter") { go(Screen.PERFORMANCE) }
                 NavRow("Presets", "Save, rename, duplicate, import/export") { go(Screen.PRESETS) }
