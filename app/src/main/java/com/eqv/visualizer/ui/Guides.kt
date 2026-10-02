@@ -425,6 +425,7 @@ object Guides {
                 "Controls",
                 items = listOf(
                     item("Background", "Green screen (#00B140, the standard key color), Bright green, Blue screen, Magenta, Black, White, Grey, or Custom to pick any color."),
+                    item("Orientation", "Auto-rotate turns with the phone (auto-rotate must be on). Portrait stays upright, for Reels and TikTok. Landscape stays sideways either way up, for YouTube-shaped videos or a phone on a stand; the controls move to a side panel."),
                     item("Preset ‹ ›", "Switch presets without leaving."),
                     item("Screen filter", "Draw the preset's filter in the room. Keep it off for keying: filters add lines and shade to the background."),
                     item("Song & preset name", "Shows them in the top corner."),

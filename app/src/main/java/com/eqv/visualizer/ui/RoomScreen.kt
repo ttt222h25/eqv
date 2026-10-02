@@ -1,6 +1,8 @@
 package com.eqv.visualizer.ui
 
 import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +64,7 @@ import com.eqv.visualizer.render.VisualizerView
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.Room
 import com.eqv.visualizer.settings.RoomColors
+import com.eqv.visualizer.settings.RoomOrientation
 import com.eqv.visualizer.settings.SettingsRepository
 import com.eqv.visualizer.ui.theme.Nothing
 
@@ -80,6 +86,8 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
     fun edit(t: (Room) -> Room) = repo.update { it.copy(room = t(it.room)) }
     EngineWhileStarted("room")
     ImmersiveWhileShown()
+    LockOrientation(room.orientation)
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Box(Modifier.fillMaxSize().background(Color(room.background))) {
         AndroidView(
@@ -115,9 +123,11 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
             visible = controls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
+            // Landscape: a side panel at the right, so most of the visuals stay in view.
+            modifier = Modifier.align(if (landscape) Alignment.CenterEnd else Alignment.BottomCenter),
         ) {
             RoomControls(
+                landscape = landscape,
                 room = room,
                 presetName = PresetOps.find(s, s.activePresetId)?.name ?: "Custom",
                 demo = demo,
@@ -131,6 +141,30 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
             )
         }
     }
+}
+
+/**
+ * Holds the screen in the room's chosen orientation while the room is open, and gives the
+ * app back its normal rotation when you leave.
+ */
+@Composable
+private fun LockOrientation(orientation: RoomOrientation) {
+    val activity = LocalContext.current as? Activity ?: return
+    DisposableEffect(activity, orientation) {
+        val before = activity.requestedOrientation
+        activity.requestedOrientation = when (orientation) {
+            RoomOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            RoomOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+            RoomOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        onDispose { activity.requestedOrientation = before }
+    }
+}
+
+fun orientationName(o: RoomOrientation) = when (o) {
+    RoomOrientation.AUTO -> "Auto-rotate"
+    RoomOrientation.PORTRAIT -> "Portrait"
+    RoomOrientation.LANDSCAPE -> "Landscape"
 }
 
 /** Readable text on any background: dark on light colors, white on dark ones. */
@@ -181,6 +215,7 @@ private fun ImmersiveWhileShown() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RoomControls(
+    landscape: Boolean,
     room: Room,
     presetName: String,
     demo: Boolean,
@@ -196,8 +231,7 @@ private fun RoomControls(
     Column(
         Modifier
             .padding(12.dp)
-            .fillMaxWidth()
-            .heightIn(max = 520.dp)
+            .then(if (landscape) Modifier.widthIn(max = 420.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max = 520.dp))
             .clip(RoundedCornerShape(28.dp))
             .background(Nothing.Black.copy(alpha = 0.86f))
             .border(1.dp, Nothing.Line, RoundedCornerShape(28.dp))
@@ -229,6 +263,16 @@ private fun RoomControls(
             style = MaterialTheme.typography.labelMedium,
             color = Nothing.Grey,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+        )
+
+        SectionTitle("Orientation")
+        ChoiceRow(null, RoomOrientation.entries, room.orientation, ::orientationName) { v -> onEdit { it.copy(orientation = v) } }
+        Hint(
+            when (room.orientation) {
+                RoomOrientation.AUTO -> "Turns with the phone (needs auto-rotate on in Quick Settings)."
+                RoomOrientation.PORTRAIT -> "Stays upright: for phone-shaped videos like Reels and TikTok."
+                RoomOrientation.LANDSCAPE -> "Stays sideways either way up: for YouTube-shaped videos or a TV stand."
+            },
         )
 
         SectionTitle("Preset")

@@ -42,6 +42,7 @@ class RingRoomTest {
         assertEquals(RadialStyle.DOTS, s.look.radial.style)
         assertEquals(RadialDirection.OUT, s.look.radial.direction)
         assertEquals(RoomColors.GREEN, s.room.background)
+        assertEquals(RoomOrientation.AUTO, s.room.orientation)
         assertTrue(s.guidesSeen.isEmpty())
         assertTrue(s.craftTips)
     }
@@ -49,7 +50,7 @@ class RingRoomTest {
     @Test
     fun roomAndGuidesSurviveARoundTrip() {
         val s = AppSettings(
-            room = Room(background = RoomColors.BLUE, showFilter = true, showInfo = true),
+            room = Room(background = RoomColors.BLUE, showFilter = true, showInfo = true, orientation = RoomOrientation.LANDSCAPE),
             guidesSeen = setOf("home", "visuals"),
             craftTips = false,
             look = Look(radial = RadialLayer(style = RadialStyle.SEGMENTS, direction = RadialDirection.BOTH, arc = 0.5f)),

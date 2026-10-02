@@ -45,7 +45,18 @@ data class Room(
     val showFilter: Boolean = false,
     /** Show the song name and preset in a corner. */
     val showInfo: Boolean = false,
+    /** Which way the room is shown; landscape fills a TV-shaped frame for recording. */
+    val orientation: RoomOrientation = RoomOrientation.AUTO,
 )
+
+@Serializable
+enum class RoomOrientation {
+    /** Follows the phone (and the system auto-rotate switch). */
+    AUTO,
+    PORTRAIT,
+    /** Either way up: turn the phone whichever side suits the camera or stand. */
+    LANDSCAPE,
+}
 
 object RoomColors {
     const val GREEN: Int = 0xFF00B140.toInt()
