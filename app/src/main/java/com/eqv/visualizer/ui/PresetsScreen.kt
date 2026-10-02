@@ -54,7 +54,7 @@ private sealed interface PresetDialog {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PresetsScreen() {
+fun PresetsScreen(go: (Screen) -> Unit) {
     val ctx = LocalContext.current
     val repo = remember { SettingsRepository.get(ctx) }
     val s by repo.state.collectAsStateWithLifecycle()
@@ -107,7 +107,8 @@ fun PresetsScreen() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PrimaryButton("Save as new") { dialog = PresetDialog.SaveNew }
+            PrimaryButton("+ Create new") { go(Screen.CRAFT) }
+            GhostButton("Save current") { dialog = PresetDialog.SaveNew }
             GhostButton("Import file") { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
             GhostButton("Paste") { dialog = PresetDialog.Paste }
             GhostButton("Export all") {
@@ -115,7 +116,7 @@ fun PresetsScreen() {
                 exportLauncher.launch("eqv-presets.json")
             }
         }
-        Hint("Changes save automatically to the preset you're on. \"Save as new\" keeps a separate copy.")
+        Hint("Create new walks you through look, colors, timing and filter, then you name it. Tweaks save automatically to the preset you're on; \"Save current\" keeps a separate copy.")
         val active = PresetOps.find(s, s.activePresetId)
         if (active != null && PresetOps.isEdited(s, active.id)) {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {

@@ -169,6 +169,9 @@ fun HomeScreen(go: (Screen) -> Unit) {
         // ---- presets
         SectionTitle("Preset" + if (PresetOps.isEdited(s, s.activePresetId)) " · edited" else "")
         PresetPicker(s) { id -> repo.update { PresetOps.apply(it, id) } }
+        Row(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+            PrimaryButton("+ Create preset") { go(Screen.CRAFT) }
+        }
 
         // ---- HQ capture
         SectionTitle("Audio")

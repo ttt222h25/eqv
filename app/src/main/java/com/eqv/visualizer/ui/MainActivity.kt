@@ -38,6 +38,7 @@ enum class Screen(val title: String, val preview: Boolean = true) {
     BEHAVIOR("Behavior", preview = false),
     PERFORMANCE("Performance"),
     PRESETS("Presets"),
+    CRAFT("Create"),
     DEBUG("Debug", preview = false),
     PERMISSIONS("Setup", preview = false),
 }
@@ -77,7 +78,8 @@ fun App() {
                 Screen.THUMP -> ThumpScreen()
                 Screen.BEHAVIOR -> BehaviorScreen(go)
                 Screen.PERFORMANCE -> PerformanceScreen()
-                Screen.PRESETS -> PresetsScreen()
+                Screen.PRESETS -> PresetsScreen(go)
+                Screen.CRAFT -> CraftScreen(onDone = { if (stack.size > 1) stack.removeAt(stack.lastIndex) })
                 Screen.DEBUG -> DebugScreen()
                 Screen.PERMISSIONS -> PermissionsScreen()
             }
