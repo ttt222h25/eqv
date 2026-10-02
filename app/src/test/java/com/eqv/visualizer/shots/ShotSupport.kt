@@ -122,3 +122,15 @@ class Watchdog(private val name: String, seconds: Long = 90) {
         finished = true
     }
 }
+
+/**
+ * Test application for screenshots: the audio engine never starts and the preview draws still
+ * frames. Set here because the activity (and its preview) starts before the test body runs.
+ */
+class ShotApp : android.app.Application() {
+    override fun onCreate() {
+        super.onCreate()
+        com.eqv.visualizer.audio.AudioEngine.disabledForTests = true
+        com.eqv.visualizer.render.VisualizerView.stillForTests = true
+    }
+}

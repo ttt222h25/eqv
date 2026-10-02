@@ -1,12 +1,11 @@
 package com.eqv.visualizer.shots
 
-import android.app.Application
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import com.eqv.visualizer.audio.AudioEngine
-import com.eqv.visualizer.render.VisualizerView
 import com.eqv.visualizer.settings.BuiltInPresets
 import com.eqv.visualizer.ui.App
+import com.eqv.visualizer.ui.MainActivity
 import com.eqv.visualizer.ui.Screen
 import com.eqv.visualizer.ui.theme.EqvTheme
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -24,7 +23,7 @@ import java.io.File
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35], application = Application::class, qualifiers = "w412dp-h2400dp-xhdpi")
+@Config(sdk = [35], application = ShotApp::class, qualifiers = "w412dp-h2400dp-xhdpi")
 class UiShots(private val screen: Screen) {
     companion object {
         @JvmStatic
@@ -32,13 +31,12 @@ class UiShots(private val screen: Screen) {
         fun params(): List<Array<Any>> = Screen.entries.map { arrayOf<Any>(it) }
     }
 
+    // The app's own activity: the APK must not ship an extra exported test activity.
     @get:Rule
-    val rule = createComposeRule()
+    val rule = createAndroidComposeRule<MainActivity>()
 
     @Test
     fun shot() {
-        AudioEngine.disabledForTests = true
-        VisualizerView.stillForTests = true
         val watchdog = Watchdog("ui-${screen.name.lowercase()}")
         // A busy moment of the demo song, so the live preview shows something.
         val nothing = BuiltInPresets.all.first()

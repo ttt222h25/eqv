@@ -95,7 +95,6 @@ dependencies {
     testImplementation(libs.androidx.test.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
-    debugImplementation(libs.compose.ui.test.manifest)
 }
 
 // Screenshots only run with -Pshots (CI publishes them); normal test runs skip them.
