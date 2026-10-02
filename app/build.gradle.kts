@@ -104,6 +104,7 @@ tasks.withType<Test>().configureEach {
         filter.includeTestsMatching("com.eqv.visualizer.shots.*")
         systemProperty("roborazzi.test.record", "true")
         systemProperty("shots.dir", rootProject.file("shots").absolutePath)
+        systemProperty("robolectric.screenshot.hwrdr.native", "true")
         maxHeapSize = "3g"
         testLogging {
             events("started", "passed", "failed", "skipped")

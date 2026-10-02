@@ -64,6 +64,10 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
     }
 
     fun start() {
+        if (stillForTests) {
+            invalidate()
+            return
+        }
         if (running) return
         running = true
         lastDrawNanos = 0L
@@ -240,6 +244,10 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
     }
 
     companion object {
+        /** Screenshot tests: draw one still frame instead of animating forever. */
+        @Volatile
+        var stillForTests = false
+
         /** Draw when at least 90% of the frame interval has passed (absorbs vsync jitter). */
         const val FRAME_SLACK = 0.9f
         /** A gap larger than this many intervals counts as a dropped frame. */

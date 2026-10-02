@@ -67,11 +67,20 @@ jobs:
 
       # Screenshots of every screen and every preset's overlay (Robolectric), published to the
       # "screens" pre-release so they can be reviewed without a phone. Never blocks the APK.
-      - name: Screenshots
+      - name: Screenshots (overlay)
         id: shots
         continue-on-error: true
-        timeout-minutes: 20
-        run: ./gradlew --no-daemon testDebugUnitTest -Pshots
+        timeout-minutes: 15
+        run: ./gradlew --no-daemon testDebugUnitTest -Pshots --tests '*OverlayShots*'
+
+      - name: Screenshots (app)
+        id: uishots
+        continue-on-error: true
+        timeout-minutes: 25
+        run: |
+          mkdir -p shots
+          cp -r app/build/test-results/testDebugUnitTest shots/overlay-results || true
+          ./gradlew --no-daemon testDebugUnitTest -Pshots --tests '*UiShots*'
 
       - name: Publish screenshots
         if: always() && github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
@@ -79,12 +88,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p shots
-          (cd app/build/test-results && zip -qr ../../../shots/test-results.zip . ) || true
+          cp -r app/build/test-results/testDebugUnitTest shots/app-results || true
+          (cd shots && zip -qr test-results.zip overlay-results app-results *.txt) || true
           gh release delete screens --yes --cleanup-tag || true
-          gh release create screens shots/*.png shots/test-results.zip \
+          gh release create screens shots/*.png shots/test-results.zip $(ls shots/*.txt 2>/dev/null) \
             --prerelease \
             --target "${{ github.sha }}" \
             --title "Screenshots ${{ github.run_number }}" \
-            --notes "Rendered by CI from ${{ github.sha }} (screenshot step: ${{ steps.shots.outcome }})." || \
+            --notes "Rendered by CI from ${{ github.sha }} (overlay: ${{ steps.shots.outcome }}, app: ${{ steps.uishots.outcome }})." || \
           gh release create screens shots/test-results.zip --prerelease --target "${{ github.sha }}" \
             --title "Screenshots ${{ github.run_number }} (none)" --notes "Screenshot step: ${{ steps.shots.outcome }}"

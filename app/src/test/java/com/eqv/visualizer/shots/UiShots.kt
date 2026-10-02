@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.eqv.visualizer.audio.AudioEngine
+import com.eqv.visualizer.render.VisualizerView
 import com.eqv.visualizer.settings.BuiltInPresets
 import com.eqv.visualizer.ui.App
 import com.eqv.visualizer.ui.Screen
@@ -37,6 +38,8 @@ class UiShots(private val screen: Screen) {
     @Test
     fun shot() {
         AudioEngine.disabledForTests = true
+        VisualizerView.stillForTests = true
+        val watchdog = Watchdog("ui-${screen.name.lowercase()}")
         // A busy moment of the demo song, so the live preview shows something.
         val nothing = BuiltInPresets.all.first()
         SimulatedAudio(nothing.look, AudioEngine.ring).advanceTo(3_200_000_000L)
@@ -45,5 +48,6 @@ class UiShots(private val screen: Screen) {
         rule.setContent { EqvTheme { App(screen) } }
         rule.mainClock.advanceTimeBy(800)
         rule.onRoot().captureRoboImage(File(shotsDir, "ui-%02d-%s.png".format(screen.ordinal, screen.name.lowercase())).path)
+        watchdog.done()
     }
 }

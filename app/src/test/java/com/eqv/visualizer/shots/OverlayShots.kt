@@ -56,13 +56,22 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
         g.cutoutY = 44f
         g.cutoutRadius = 16f
 
-        val frame = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(frame)
         val out = Bitmap.createBitmap(W * 2 + 12, H + HEADER, Bitmap.Config.ARGB_8888)
         val outCanvas = Canvas(out)
         outCanvas.drawColor(0xFF000000.toInt())
         val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 30f; typeface = Typeface.MONOSPACE }
         outCanvas.drawText("${preset.name}  —  left: on a kick, right: between kicks", 16f, 38f, label)
+
+        // Hardware path (glows like on the phone); software canvas if this environment can't.
+        val hw = try {
+            HwCapture(W, H)
+        } catch (e: Throwable) {
+            if (index == 0) note("hardware renderer unavailable: $e")
+            null
+        }
+        val soft = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+        val softCanvas = Canvas(soft)
+        var hwOk = hw != null
 
         val home = FakeHome(W, H, DENSITY)
         var hitFrame = -1
@@ -72,11 +81,12 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
         for (i in FPS * WARMUP_SEC until total) {
             val now = 1_000_000_000L + i * 1_000_000_000L / FPS
             audio.advanceTo(now)
-            canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR)
+            val canvas: Canvas = if (hwOk) hw!!.begin() else softCanvas.also { it.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR) }
             home.draw(canvas)
             val layer = canvas.saveLayerAlpha(0f, 0f, W.toFloat(), H.toFloat(), (settings.performance.windowAlpha * 255).toInt())
             renderer.draw(canvas, now, settings, 0L, applyThumpTransform = true)
             canvas.restoreToCount(layer)
+            if (hwOk) hw!!.end()
 
             val seq = renderer.ctx.frame.beatSeq
             if (i > FPS * 3 && hitFrame < 0 && lastSeq >= 0 && seq > lastSeq) {
@@ -84,10 +94,35 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
                 midFrame = i + FPS / 4
             }
             lastSeq = seq
-            if (i == hitFrame || (hitFrame < 0 && i == total - 2)) outCanvas.drawBitmap(frame, 0f, HEADER.toFloat(), null)
-            if (i == midFrame || (hitFrame < 0 && i == total - 1)) outCanvas.drawBitmap(frame, W + 12f, HEADER.toFloat(), null)
+            val left = i == hitFrame || (hitFrame < 0 && i == total - 2)
+            val right = i == midFrame || (hitFrame < 0 && i == total - 1)
+            if (left || right) {
+                val img = if (hwOk) {
+                    try {
+                        hw!!.capture()
+                    } catch (e: Throwable) {
+                        if (index == 0) note("hardware capture failed: $e")
+                        hwOk = false
+                        soft
+                    }
+                } else soft
+                outCanvas.drawBitmap(img, if (left) 0f else W + 12f, HEADER.toFloat(), null)
+            }
             if (midFrame in 0..i) break
         }
+        hw?.close()
+        if (index == 0) {
+            for ((name, src) in listOf("edge" to com.eqv.visualizer.render.Shaders.EDGE, "filter" to com.eqv.visualizer.render.FilterShader.SOURCE)) {
+                try {
+                    android.graphics.RuntimeShader(src)
+                    note("$name shader compiles")
+                } catch (e: Throwable) {
+                    note("$name shader does NOT compile: ${e.message}")
+                }
+            }
+        }
+        if (index == 0) note("overlay render path: ${if (hwOk) "hardware" else "software (no glow)"}")
+        note("${preset.name}: edge shader ${if (renderer.shaderFallback) "FAILED (path fallback)" else "ok"}")
         out.savePng("fx-%02d-%s.png".format(index, preset.id.substringAfterLast('.')))
     }
 }
