@@ -10,7 +10,6 @@ import android.graphics.Shader
 import com.eqv.visualizer.settings.BeatFx
 import com.eqv.visualizer.settings.FilterLayer
 import kotlin.math.cos
-import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -39,11 +38,8 @@ class FilterRenderer {
     private var scanPhase = 0f
     private var rollPhase = 0f
 
-    // Smoothed audio levels driving the filter.
-    private var bass = 0f
-    private var mid = 0f
-    private var treble = 0f
-    private var level = 0f
+    // What the music is doing, per band.
+    private val drive = FilterDrive()
 
     // Fallback resources (rebuilt only when sizes change).
     private val fbPaint = Paint()
@@ -59,6 +55,7 @@ class FilterRenderer {
         fxStrength = 0.5f + 0.5f * strength
         fxSeed = (rand01() * 97f)
         fxRand = rand01() * 2f - 1f
+        drive.onBeat(timeSec, strength)
     }
 
     fun draw(canvas: Canvas, ctx: RenderContext) {
@@ -69,19 +66,16 @@ class FilterRenderer {
         val f = ctx.frame
         val t = ctx.timeSec
 
-        // Smoothed band levels (the audio frame already has fast attack / slow decay; this only
-        // removes frame-to-frame jitter so the filter breathes instead of twitching).
-        val a = 1f - exp(-ctx.dtSec / SMOOTH_SEC)
-        bass += (f.bass - bass) * a
-        mid += (f.mid - mid) * a
-        treble += (f.treble - treble) * a
-        level += (f.level - level) * a
+        drive.update(f.bass, f.mid, f.treble, f.level, t, ctx.dtSec)
         val r = cfg.react.coerceIn(0f, 1f)
-        val kBass = cfg.amount * follow(bass, r)
-        val kMid = cfg.amount * follow(mid, r)
-        val kTreble = cfg.amount * follow(treble, r)
-        val kLevel = cfg.amount * follow(level, r)
-        val speed = 1f + r * level * SPEED_BOOST
+        val p = cfg.punch.coerceIn(0f, 1f)
+        val bassHit = drive.bassHit
+        val kBass = cfg.amount * follow(drive.bass.level, r) * pump(bassHit, p)
+        val kMid = cfg.amount * follow(drive.mid.level, r) * pump(drive.mid.hit, p)
+        val kTreble = cfg.amount * follow(drive.treble.level, r) * pump(drive.treble.hit, p)
+        val kLevel = cfg.amount * follow(drive.level.level, r) * pump(max(drive.level.hit, bassHit * 0.8f), p)
+        // Loud parts move the lines faster; every kick lurches them forward.
+        val speed = 1f + r * drive.level.level * SPEED_BOOST + p * bassHit * KICK_SPEED
 
         val fx = beatEnvelope(t, cfg) * cfg.beatFxStrength.coerceIn(0f, 1f)
         val period = max(2f, g.dp(cfg.scanlineDp).roundToInt().toFloat())
@@ -96,6 +90,7 @@ class FilterRenderer {
         var dim = cfg.flicker * kTreble * 0.12f * hash01(floor(t * 30f))
         var glitch = 0f
         var tracking = cfg.tracking * kTreble
+        var tintA = cfg.tintAmount * kLevel
         val tintColor = if (cfg.tintFromAlbum) ctx.colors.album?.getOrNull(0) ?: cfg.tint else cfg.tint
         when (cfg.beatFx) {
             BeatFx.NONE -> {}
@@ -111,20 +106,22 @@ class FilterRenderer {
             }
             BeatFx.GRAIN_BURST -> grain = (grain + fx * 0.8f).coerceAtMost(1.2f)
             BeatFx.VIGNETTE_PUMP -> vignette = (vignette + fx * PUMP_VIGNETTE).coerceAtMost(1.3f)
+            BeatFx.COLOR_PULSE -> tintA += fx * PULSE_TINT
         }
+        tintA = tintA.coerceIn(0f, MAX_TINT)
 
         val s = shader
         if (s != null) {
             try {
                 s.setFloatUniform("uSize", g.width, g.height)
                 s.setFloatUniform("uScan", scan.coerceIn(0f, 1f), period, phase, 0f)
-                s.setFloatUniform("uMask", cfg.mask * kMid, max(1f, g.dp(cfg.maskDp)))
+                s.setFloatUniform("uMask", (cfg.mask * kMid).coerceAtMost(1.3f), max(1f, g.dp(cfg.maskDp)))
                 s.setFloatUniform("uGrid", (cfg.grid * kMid).coerceIn(0f, 1f), max(2f, g.dp(cfg.gridDp)), if (cfg.gridRound) 1f else 0f)
                 s.setFloatUniform("uVig", vignette.coerceAtMost(1.1f), (cfg.bezel * kBass).coerceAtMost(1.1f), g.minSide * BEZEL_WIDTH)
-                s.setFloatUniform("uTintA", (cfg.tintAmount * kLevel).coerceIn(0f, MAX_TINT))
+                s.setFloatUniform("uTintA", tintA)
                 s.setColorUniform("uTint", tintColor)
-                s.setFloatUniform("uGrain", grain, floor(t * cfg.grainFps.coerceIn(1f, 60f)) % 1000f, max(1f, g.dp(GRAIN_DP)))
-                s.setFloatUniform("uRoll", cfg.rollBar * kLevel, rollY)
+                s.setFloatUniform("uGrain", grain.coerceAtMost(1.3f), floor(t * cfg.grainFps.coerceIn(1f, 60f)) % 1000f, max(1f, g.dp(GRAIN_DP)))
+                s.setFloatUniform("uRoll", (cfg.rollBar * kLevel).coerceAtMost(2f), rollY)
                 s.setFloatUniform("uDim", dim.coerceIn(0f, 0.6f))
                 s.setFloatUniform("uTrack", tracking.coerceIn(0f, 1.2f), floor(t * 30f) % 1000f, max(1f, g.dp(1f)))
                 s.setFloatUniform("uGlitch", glitch, fxSeed + floor(t * 20f) % 50f * 0.37f)
@@ -136,13 +133,12 @@ class FilterRenderer {
                 paint.shader = null
             }
         }
-        drawFallback(canvas, ctx, cfg, tintColor, (cfg.tintAmount * kLevel).coerceIn(0f, MAX_TINT), scan, period.toInt(), vignette, dim)
+        drawFallback(canvas, ctx, tintColor, tintA, scan, period.toInt(), vignette, dim)
     }
 
     private fun drawFallback(
         canvas: Canvas,
         ctx: RenderContext,
-        cfg: FilterLayer,
         tint: Int,
         tintA: Float,
         scan: Float,
@@ -191,10 +187,13 @@ class FilterRenderer {
     }
 
     /**
-     * Music follow factor: at [r] = 0 always 1; at [r] = 1 half strength when silent, about
-     * double at full level.
+     * Level follow factor: at [r] = 0 always 1; at [r] = 1 a fifth of the strength when silent,
+     * about double at full level.
      */
-    private fun follow(x: Float, r: Float): Float = (1f + r * (x * FOLLOW_GAIN - 0.5f)).coerceIn(0f, 2f)
+    private fun follow(x: Float, r: Float): Float = (1f + r * (x * FOLLOW_GAIN - 0.8f)).coerceIn(0.1f, 2.2f)
+
+    /** Hit multiplier: up to 1 + [PUNCH_GAIN] right on a hit at full punch. */
+    private fun pump(hit: Float, p: Float): Float = 1f + p * hit * PUNCH_GAIN
 
     private fun hash01(x: Float): Float {
         val v = sin(x * 12.9898f) * 43758.547f
@@ -216,14 +215,17 @@ class FilterRenderer {
         const val BEZEL_WIDTH = 0.07f
         const val GRAIN_DP = 1.2f
         const val ROLL_MARGIN = 0.15f
-        /** Time constant of the extra level smoothing. */
-        const val SMOOTH_SEC = 0.06f
-        const val FOLLOW_GAIN = 1.6f
+        const val FOLLOW_GAIN = 2f
+        const val PUNCH_GAIN = 1.8f
         /** Roll bar / scanline drift run up to this much faster when the music is loud. */
         const val SPEED_BOOST = 2.5f
+        /** Extra line/roll speed right on a kick at full punch. */
+        const val KICK_SPEED = 8f
         /** Beat hits stay gentle: a dip in brightness, not a strobe. */
         const val FLICKER_DIM = 0.2f
         const val PUMP_VIGNETTE = 0.35f
+        /** Color wash added on a beat; stays under [MAX_TINT] so it tints, never whites out. */
+        const val PULSE_TINT = 0.25f
     }
 }
 

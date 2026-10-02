@@ -272,13 +272,14 @@ private fun filterName(st: FilterStyle) = when (st) {
     FilterStyle.CUSTOM -> "Custom"
 }
 
-private fun beatFxName(fx: BeatFx) = when (fx) {
+internal fun beatFxName(fx: BeatFx) = when (fx) {
     BeatFx.NONE -> "None"
     BeatFx.FLICKER -> "Flicker"
     BeatFx.SCAN_JUMP -> "Scan jump"
     BeatFx.GLITCH -> "Glitch"
     BeatFx.GRAIN_BURST -> "Grain burst"
     BeatFx.VIGNETTE_PUMP -> "Vignette pump"
+    BeatFx.COLOR_PULSE -> "Color pulse"
 }
 
 @Composable
@@ -296,8 +297,9 @@ fun FilterScreen() {
         SliderRow("Strength", f.amount, 0f..1f, ::fmtPct) { v -> repo.updateLook { it.copy(filter = it.filter.copy(amount = v)) } }
 
         SectionTitle("Music")
-        SliderRow("React to music", f.react, 0f..1f, { if (it < 0.02f) "static" else fmtPct(it) }) { v -> edit { it.copy(react = v) } }
-        Hint("Bass drives the scanlines, vignette and tube edge; mids the RGB stripes and pixel grid; treble the grain, flicker and tape noise; loudness the color wash and how fast the roll bar and lines move.")
+        SliderRow("Follow the music", f.react, 0f..1f, { if (it < 0.02f) "static" else fmtPct(it) }) { v -> edit { it.copy(react = v) } }
+        SliderRow("Punch on hits", f.punch, 0f..1f, { if (it < 0.02f) "off" else fmtPct(it) }) { v -> edit { it.copy(punch = v) } }
+        Hint("Follow: the filter gets stronger when the music is loud and fades when it's quiet. Punch: every kick, snare or hi-hat makes its part pump, measured against the song itself, so quiet songs hit as hard as loud ones. Bass drives the scanlines, vignette and tube edge (and jolts the lines forward); mids the RGB stripes and pixel grid; treble the grain, flicker and tape noise; loudness the color wash and roll bar. Try it in Test lab with the Kick, Chords and Hi-hats sounds.")
         ChoiceRow("On the beat", BeatFx.entries, f.beatFx, ::beatFxName) { v -> edit { it.copy(beatFx = v) } }
         if (f.beatFx != BeatFx.NONE) {
             SliderRow("Hit strength", f.beatFxStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(beatFxStrength = v) } }
