@@ -1,5 +1,7 @@
 package com.eqv.visualizer.shots
 
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import com.eqv.visualizer.audio.AudioEngine
@@ -43,7 +45,11 @@ class UiShots(private val screen: Screen) {
         SimulatedAudio(nothing.look, AudioEngine.ring).advanceTo(3_200_000_000L)
         // Manual clock: the preview and meters animate forever, so "idle" would never come.
         rule.mainClock.autoAdvance = false
-        rule.setContent { EqvTheme { App(screen) } }
+        // MainActivity already set its content; swap what its ComposeView shows.
+        rule.runOnUiThread {
+            val root = rule.activity.findViewById<ViewGroup>(android.R.id.content)
+            (root.getChildAt(0) as ComposeView).setContent { EqvTheme { App(screen) } }
+        }
         rule.mainClock.advanceTimeBy(800)
         rule.onRoot().captureRoboImage(File(shotsDir, "ui-%02d-%s.png".format(screen.ordinal, screen.name.lowercase())).path)
         watchdog.done()
