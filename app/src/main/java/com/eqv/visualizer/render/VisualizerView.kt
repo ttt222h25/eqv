@@ -27,9 +27,15 @@ import com.eqv.visualizer.settings.SettingsRepository
  *   reports system-bar visibility (used for "hide in fullscreen").
  * - Preview mode: draws a simulated phone screen (scaled real geometry + fake app content)
  *   and applies the Thump as a *real* shake of the whole simulated screen.
+ * - Room mode: like the overlay, but on a solid background inside the app (green screen).
  */
 @SuppressLint("ViewConstructor")
-class VisualizerView(context: Context, private val preview: Boolean) : View(context), Choreographer.FrameCallback {
+class VisualizerView(
+    context: Context,
+    private val preview: Boolean,
+    /** Full-screen room: real geometry like the overlay, drawn on the room's background color. */
+    private val room: Boolean = false,
+) : View(context), Choreographer.FrameCallback {
     val renderer = VisualRenderer(AudioEngine.ring).also { it.ctx.preview = preview }
     private val repo = SettingsRepository.get(context)
     private var running = false
@@ -193,6 +199,10 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
     }
 
     private fun drawOverlay(canvas: Canvas, s: AppSettings, now: Long) {
+        if (room) {
+            canvas.drawColor(s.room.background)
+            renderer.drawFilter = s.room.showFilter
+        }
         renderer.draw(canvas, now, s, syncDelayNanos(s), applyThumpTransform = true)
         if (s.debug.overlayDebug || s.performance.showFps) {
             renderer.hud.draw(canvas, renderer.ctx, stats, RuntimeState.engine.value.active, s.debug.overlayDebug)

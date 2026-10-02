@@ -64,7 +64,7 @@ private data class Meters(val bass: Float = 0f, val mid: Float = 0f, val treble:
  * preview, live band meters and quick preset switching; optionally on the real screen.
  */
 @Composable
-fun TestLabScreen() {
+fun TestLabScreen(go: (Screen) -> Unit) {
     val ctx = LocalContext.current
     val repo = remember { SettingsRepository.get(ctx) }
     val s by repo.state.collectAsStateWithLifecycle()
@@ -79,8 +79,8 @@ fun TestLabScreen() {
     DisposableEffect(Unit) {
         RuntimeState.demoOverride.value = false
         onDispose {
-            // Leaving the lab ends the test, unless it is running on the real screen.
-            if (!RuntimeState.testOverlay.value) {
+            // Leaving the lab ends the test, unless it is running on the real screen or in the room.
+            if (!RuntimeState.testOverlay.value && !RuntimeState.roomOpen.value) {
                 RuntimeState.testInput.value = null
                 RuntimeState.testPaused.value = false
             }
@@ -163,6 +163,11 @@ fun TestLabScreen() {
                 } else {
                     RuntimeState.testOverlay.value = false
                 }
+            }
+            NavRow("Open the room", "This test full screen on green or any color") {
+                // Set before leaving so the lab keeps the test playing (the room clears it on exit).
+                RuntimeState.roomOpen.value = true
+                go(Screen.ROOM)
             }
         }
         Spacer(Modifier.height(32.dp))

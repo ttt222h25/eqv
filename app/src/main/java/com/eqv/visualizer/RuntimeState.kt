@@ -74,6 +74,9 @@ object RuntimeState {
     /** Force the overlay on with whatever source is active, for testing without music. */
     val testOverlay = MutableStateFlow(false)
 
+    /** The full-screen room is open: the overlay hides so the visuals aren't drawn twice. */
+    val roomOpen = MutableStateFlow(false)
+
     /** Use the demo signal regardless of the configured source (preview / test mode). */
     val demoOverride = MutableStateFlow(false)
 

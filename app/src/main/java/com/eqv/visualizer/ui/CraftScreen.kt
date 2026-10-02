@@ -57,6 +57,7 @@ import com.eqv.visualizer.settings.Limits
 import com.eqv.visualizer.settings.Look
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.PulseStyle
+import com.eqv.visualizer.settings.RadialDirection
 import com.eqv.visualizer.settings.RadialStyle
 import com.eqv.visualizer.settings.SettingsJson
 import com.eqv.visualizer.settings.SettingsRepository
@@ -111,6 +112,7 @@ fun CraftScreen(onDone: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         StepHeader(step, steps.size, current.title)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            if (s.craftTips) TipCard(Guides.createTips[step]) { repo.update { it.copy(craftTips = false) } }
             when (current) {
                 CraftStep.START -> StartStep(s) { look -> repo.update { it.copy(look = look) } }
                 CraftStep.LOOK -> LayersStep(s.look, edit)
@@ -224,8 +226,15 @@ private fun LayersStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     Group {
         SwitchRow("Radial ring", r.enabled, "Circle of bars in the middle") { v -> edit { it.copy(radial = it.radial.copy(enabled = v)) } }
         if (r.enabled) {
-            ChoiceRow(null, RadialStyle.entries, r.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(radial = it.radial.copy(style = v)) } }
+            ChoiceRow(null, RadialStyle.entries, r.style, ::radialStyleName) { v -> edit { it.copy(radial = it.radial.copy(style = v)) } }
+            ChoiceRow("Bars grow", RadialDirection.entries, r.direction, ::radialDirectionName) { v -> edit { it.copy(radial = it.radial.copy(direction = v)) } }
             SliderRow("Size", r.radius, 0.05f..0.45f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(radius = v)) } }
+            SliderRow("Bar length", r.length, 0.02f..0.5f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(length = v)) } }
+            SliderRow("Arc", r.arc, 0.1f..1f, { if (it >= 0.995f) "full" else "${(it * 360).roundToInt()}°" }) { v -> edit { it.copy(radial = it.radial.copy(arc = if (v >= 0.995f) 1f else v)) } }
+            SliderRow("Rotation", r.rotationSpeed, -0.3f..0.3f, { "%.2f rps".format(it) }) { v -> edit { it.copy(radial = it.radial.copy(rotationSpeed = v)) } }
+            SliderRow("Beat bounce", r.beatScale, 0f..1f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(beatScale = v)) } }
+            SliderRow("Breathe with bass", r.bassScale, 0f..1f, { if (it < 0.01f) "off" else "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(bassScale = v)) } }
+            Hint("Oval, spin on beats, center fill and more are in Visuals → Ring.")
         }
     }
     val w = look.wave
@@ -240,6 +249,10 @@ private fun LayersStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     Group {
         SwitchRow("Beat ring", p.enabled && p.style == PulseStyle.RING, "A ring that expands on each beat") { v ->
             edit { it.copy(pulse = it.pulse.copy(enabled = v, style = PulseStyle.RING)) }
+        }
+        if (p.enabled && p.style == PulseStyle.RING) {
+            SliderRow("Ring width", p.ringWidthDp, 1f..40f, { "%.1f dp".format(it) }) { v -> edit { it.copy(pulse = it.pulse.copy(ringWidthDp = v)) } }
+            IntSliderRow("Rings", p.ringCount, 1..3) { v -> edit { it.copy(pulse = it.pulse.copy(ringCount = v)) } }
         }
     }
 }

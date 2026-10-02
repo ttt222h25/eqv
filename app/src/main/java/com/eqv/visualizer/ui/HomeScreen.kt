@@ -166,6 +166,8 @@ fun HomeScreen(go: (Screen) -> Unit) {
 
         Group("Try it") {
             NavRow("Test lab", "Your songs or test sounds, big preview, live meters") { go(Screen.LAB) }
+            NavRow("Room", "The visuals full screen on green or any color", value = hex(s.room.background)) { go(Screen.ROOM) }
+            NavRow("Guides", "How every page and setting works, step by step") { go(Screen.GUIDES) }
         }
 
         Group("More") {

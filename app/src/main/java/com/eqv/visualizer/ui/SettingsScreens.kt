@@ -38,6 +38,8 @@ import com.eqv.visualizer.settings.HapticPattern
 import com.eqv.visualizer.settings.Limits
 import com.eqv.visualizer.settings.Look
 import com.eqv.visualizer.settings.PulseStyle
+import com.eqv.visualizer.settings.RadialDirection
+import com.eqv.visualizer.settings.RadialLayer
 import com.eqv.visualizer.settings.RadialStyle
 import com.eqv.visualizer.settings.RenderQuality
 import com.eqv.visualizer.settings.SettingsRepository
@@ -64,11 +66,32 @@ private fun ScrollColumn(content: @Composable () -> Unit) {
 private fun fmtPct(v: Float) = "${(v * 100).roundToInt()}%"
 private fun fmtMs(v: Float) = "${v.roundToInt()} ms"
 private fun fmtDp(v: Float) = "%.1f dp".format(v)
+private fun fmtPctOff(v: Float) = if (v < 0.01f) "off" else fmtPct(v)
+private fun fmtAspect(v: Float) = when {
+    kotlin.math.abs(v - 1f) < 0.04f -> "circle"
+    v < 1f -> "wide ×%.2f".format(1f / v)
+    else -> "tall ×%.2f".format(v)
+}
+
+internal fun radialStyleName(st: RadialStyle) = when (st) {
+    RadialStyle.BARS -> "Bars"
+    RadialStyle.DOTS -> "Dots"
+    RadialStyle.LINE -> "Line"
+    RadialStyle.FILLED -> "Filled"
+    RadialStyle.SEGMENTS -> "Segments"
+}
+
+internal fun radialDirectionName(d: RadialDirection) = when (d) {
+    RadialDirection.OUT -> "Outward"
+    RadialDirection.IN -> "Inward"
+    RadialDirection.BOTH -> "Both ways"
+}
+
 private fun pretty(e: Enum<*>) = e.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
 
 // ============================================================================ visuals
 
-private enum class LayerTab(val label: String) { EDGE("Edge"), BARS("Bars"), RADIAL("Radial"), WAVE("Wave"), PULSE("Pulse") }
+private enum class LayerTab(val label: String) { EDGE("Edge"), BARS("Bars"), RADIAL("Ring"), WAVE("Wave"), PULSE("Pulse") }
 
 @Composable
 fun LayersScreen() {
@@ -151,23 +174,48 @@ fun LayersScreen() {
                 }
                 LayerTab.RADIAL -> {
                     val r = look.radial
+                    fun er(t: (RadialLayer) -> RadialLayer) = edit { it.copy(radial = t(it.radial)) }
                     Group {
-                        SwitchRow("Radial spectrum", r.enabled) { v -> edit { it.copy(radial = r.copy(enabled = v)) } }
+                        SwitchRow("Radial ring", r.enabled, "A circle of bars that dances to the music") { v -> er { it.copy(enabled = v) } }
                         if (r.enabled) {
-                            ChoiceRow("Style", RadialStyle.entries, r.style, { pretty(it) }) { v -> edit { it.copy(radial = r.copy(style = v)) } }
-                            SliderRow("Center X", r.centerX, 0f..1f, ::fmtPct) { v -> edit { it.copy(radial = r.copy(centerX = v)) } }
-                            SliderRow("Center Y", r.centerY, 0f..1f, ::fmtPct) { v -> edit { it.copy(radial = r.copy(centerY = v)) } }
-                            SliderRow("Radius", r.radius, 0.02f..0.5f, ::fmtPct) { v -> edit { it.copy(radial = r.copy(radius = v)) } }
-                            SliderRow("Bar length", r.length, 0.02f..0.5f, ::fmtPct) { v -> edit { it.copy(radial = r.copy(length = v)) } }
-                            SliderRow("Thickness", r.thicknessDp, 1f..16f, ::fmtDp) { v -> edit { it.copy(radial = r.copy(thicknessDp = v)) } }
-                            SliderRow("Rotation", r.rotationSpeed, -0.3f..0.3f, { "%.2f rps".format(it) }) { v -> edit { it.copy(radial = r.copy(rotationSpeed = v)) } }
-                            SliderRow("Beat bounce", r.beatScale, 0f..1f, ::fmtPct) { v -> edit { it.copy(radial = r.copy(beatScale = v)) } }
-                            SwitchRow("Mirror", r.mirror, "Symmetric left/right") { v -> edit { it.copy(radial = r.copy(mirror = v)) } }
+                            ChoiceRow("Style", RadialStyle.entries, r.style, ::radialStyleName) { v -> er { it.copy(style = v) } }
                         }
                     }
                     if (r.enabled) {
+                        Group("Shape") {
+                            ChoiceRow("Bars grow", RadialDirection.entries, r.direction, ::radialDirectionName) { v -> er { it.copy(direction = v) } }
+                            SliderRow("Radius", r.radius, 0.02f..0.5f, ::fmtPct) { v -> er { it.copy(radius = v) } }
+                            SliderRow("Bar length", r.length, 0.02f..0.5f, ::fmtPct) { v -> er { it.copy(length = v) } }
+                            SliderRow("Thickness", r.thicknessDp, 1f..16f, ::fmtDp) { v -> er { it.copy(thicknessDp = v) } }
+                            SliderRow("Bars around", r.barCount.toFloat(), 0f..Limits.MAX_RING_BARS.toFloat(), { if (it < Limits.MIN_RING_BARS) "auto" else "${it.roundToInt()}" }) { v ->
+                                val n = v.roundToInt()
+                                er { it.copy(barCount = if (n < Limits.MIN_RING_BARS) 0 else n) }
+                            }
+                            SliderRow("Arc", r.arc, 0.1f..1f, { if (it >= 0.995f) "full" else "${(it * 360).roundToInt()}°" }) { v -> er { it.copy(arc = if (v >= 0.995f) 1f else v) } }
+                            SliderRow("Start angle", r.startAngle, -180f..180f, { "${it.roundToInt()}°" }) { v -> er { it.copy(startAngle = v) } }
+                            SliderRow("Oval", r.aspect, 0.4f..2.5f, ::fmtAspect) { v -> er { it.copy(aspect = if (kotlin.math.abs(v - 1f) < 0.04f) 1f else v) } }
+                            SwitchRow("Mirror", r.mirror, "Symmetric: bass at the start, treble in the middle") { v -> er { it.copy(mirror = v) } }
+                            SwitchRow("Round ends", r.roundCaps, "Off = square bar ends") { v -> er { it.copy(roundCaps = v) } }
+                        }
+                        Group("Position") {
+                            SliderRow("Center X", r.centerX, 0f..1f, ::fmtPct) { v -> er { it.copy(centerX = v) } }
+                            SliderRow("Center Y", r.centerY, 0f..1f, ::fmtPct) { v -> er { it.copy(centerY = v) } }
+                        }
+                        Group("Movement") {
+                            SliderRow("Rotation", r.rotationSpeed, -0.3f..0.3f, { "%.2f rps".format(it) }) { v -> er { it.copy(rotationSpeed = v) } }
+                            SliderRow("Spin on beats", r.beatSpin, 0f..1f, ::fmtPctOff) { v -> er { it.copy(beatSpin = v) } }
+                            SliderRow("Beat bounce", r.beatScale, 0f..1f, ::fmtPctOff) { v -> er { it.copy(beatScale = v) } }
+                            SliderRow("Breathe with bass", r.bassScale, 0f..1f, ::fmtPctOff) { v -> er { it.copy(bassScale = v) } }
+                        }
+                        Group("Extras") {
+                            SliderRow("Base circle", r.baseCircle, 0f..1f, ::fmtPctOff) { v -> er { it.copy(baseCircle = v) } }
+                            SliderRow("Center fill", r.centerFill, 0f..1f, ::fmtPctOff) { v -> er { it.copy(centerFill = v) } }
+                            if (r.style != RadialStyle.LINE && r.style != RadialStyle.FILLED) {
+                                SwitchRow("Peak dots", r.peakDots, "Dots that hang at recent peaks") { v -> er { it.copy(peakDots = v) } }
+                            }
+                        }
                         Group("Color") {
-                            ColorSpecEditor(r.color) { c -> edit { it.copy(radial = r.copy(color = c)) } }
+                            ColorSpecEditor(r.color) { c -> er { it.copy(color = c) } }
                         }
                     }
                 }
@@ -200,6 +248,14 @@ fun LayersScreen() {
                             SliderRow("Strength", p.strength, 0f..1f, ::fmtPct) { v -> edit { it.copy(pulse = p.copy(strength = v)) } }
                             SliderRow("Decay", p.decayMs, 60f..1200f, ::fmtMs) { v -> edit { it.copy(pulse = p.copy(decayMs = v)) } }
                             if (p.style == PulseStyle.VIGNETTE) SliderRow("Vignette size", p.size, 0f..1.2f, ::fmtPct) { v -> edit { it.copy(pulse = p.copy(size = v)) } }
+                            if (p.style == PulseStyle.RING) {
+                                SliderRow("Ring start size", p.ringStart, 0f..0.6f, ::fmtPct) { v -> edit { it.copy(pulse = p.copy(ringStart = v)) } }
+                                SliderRow("Ring grows", p.ringGrowth, 0f..1.2f, ::fmtPct) { v -> edit { it.copy(pulse = p.copy(ringGrowth = v)) } }
+                                SliderRow("Ring width", p.ringWidthDp, 1f..40f, ::fmtDp) { v -> edit { it.copy(pulse = p.copy(ringWidthDp = v)) } }
+                                IntSliderRow("Rings", p.ringCount, 1..3) { v -> edit { it.copy(pulse = p.copy(ringCount = v)) } }
+                                SliderRow("Ring fill", p.ringFill, 0f..1f, ::fmtPctOff) { v -> edit { it.copy(pulse = p.copy(ringFill = v)) } }
+                                Hint("Starts from the center of the radial ring when that layer is on.")
+                            }
                         }
                     }
                     if (p.enabled) {

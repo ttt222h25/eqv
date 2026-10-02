@@ -77,6 +77,7 @@ class VisualizerService : Service() {
         scope.launch { MediaMonitor.state.collect { evaluate() } }
         scope.launch { RuntimeState.testOverlay.collect { evaluate() } }
         scope.launch { RuntimeState.demoOverride.collect { evaluate() } }
+        scope.launch { RuntimeState.roomOpen.collect { evaluate() } }
         scope.launch { RuntimeState.engine.collect { onEngineStatus() } }
     }
 
@@ -214,6 +215,8 @@ class VisualizerService : Service() {
         if (playing && pause == null) {
             val fg = signals.foregroundPackage
             hidden = when {
+                // The room draws the visuals itself, full screen; the overlay would double them.
+                RuntimeState.roomOpen.value -> getString(R.string.pause_room)
                 fg != null && fg in b.hideInApps -> getString(R.string.pause_hidden_app)
                 b.hideInFullscreen && !barsVisible -> getString(R.string.pause_fullscreen)
                 else -> null

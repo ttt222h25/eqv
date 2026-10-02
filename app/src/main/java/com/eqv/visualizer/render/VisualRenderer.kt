@@ -29,6 +29,9 @@ class VisualRenderer(private val ring: FrameRing) {
     private val filter = FilterRenderer()
     val hud = DebugHud()
 
+    /** False in the room when its "screen filter" option is off. */
+    var drawFilter = true
+
     /** Called on each newly seen (delayed) beat: strength 0..1 and whether a Thump fired. */
     var onBeat: ((strength: Float, thumped: Boolean) -> Unit)? = null
 
@@ -91,7 +94,7 @@ class VisualRenderer(private val ring: FrameRing) {
         radial.draw(canvas, c)
         canvas.restore()
         // The filter sits over everything and stays put: it is the "screen", not a visual.
-        filter.draw(canvas, c)
+        if (drawFilter) filter.draw(canvas, c)
     }
 
     private fun onNewBeat(c: RenderContext, settings: AppSettings) {

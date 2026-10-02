@@ -14,6 +14,7 @@ import com.eqv.visualizer.settings.BarsStyle
 import com.eqv.visualizer.settings.ColorMode
 import com.eqv.visualizer.settings.ColorSpec
 import com.eqv.visualizer.settings.PulseStyle
+import com.eqv.visualizer.settings.RadialDirection
 import com.eqv.visualizer.settings.RadialStyle
 import com.eqv.visualizer.settings.WaveSourceKind
 import com.eqv.visualizer.settings.WaveStyle
@@ -190,61 +191,178 @@ class BarsLayerRenderer {
 class RadialLayerRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val path = Path()
+    private val oval = RectF()
     private val glow = GlowPass("radial")
     private var rotation = 0f
+
+    // Bar ends per slot (x, y pairs), reused every frame.
+    private val outer = FloatArray(MAX_SLOTS * 2)
+    private val inner = FloatArray(MAX_SLOTS * 2)
 
     fun draw(canvas: Canvas, ctx: RenderContext) {
         val cfg = ctx.look.radial
         val f = ctx.frame
         if (!cfg.enabled || f.bandCount == 0) return
+        // Steady spin plus a kick on every beat (same direction as the spin).
+        val dir = if (cfg.rotationSpeed < 0f) -1f else 1f
+        val kick = cfg.beatSpin * ctx.beatEnv * (0.4f + 0.6f * ctx.beatStrength) * BEAT_SPIN_RATE * dir
+        rotation = (rotation + ctx.dtSec * (cfg.rotationSpeed + kick)) % 1f
+        withGlow(canvas, ctx, glow, cfg.color) { c -> drawRing(c, ctx) }
+    }
+
+    private fun drawRing(c: Canvas, ctx: RenderContext) {
+        val cfg = ctx.look.radial
+        val f = ctx.frame
         val g = ctx.geometry
-        rotation = (rotation + ctx.dtSec * cfg.rotationSpeed) % 1f
-        withGlow(canvas, ctx, glow, cfg.color) { c ->
-            val cx = g.width * cfg.centerX
-            val cy = g.height * cfg.centerY
-            val beatBoost = 1f + cfg.beatScale * ctx.beatEnv * ctx.beatStrength * 0.3f
-            val r0 = g.minSide * cfg.radius * beatBoost
-            val maxLen = g.minSide * cfg.length
-            val n = f.bandCount
-            val slots = if (cfg.mirror) n * 2 else n
-            paint.strokeWidth = g.dp(cfg.thicknessDp)
-            val opacity = cfg.color.opacity
-            if (cfg.style == RadialStyle.LINE) path.rewind()
-            for (s in 0 until slots) {
-                val band = if (cfg.mirror) (if (s < n) s else 2 * n - 1 - s) else s
-                val v = f.bands[band]
-                val a = (2.0 * PI * (s.toFloat() / slots + rotation) - PI / 2).toFloat()
-                val ca = cos(a)
-                val sa = sin(a)
-                val len = max(g.dp(2f), v * maxLen)
-                val color = ColorResolver.withAlpha(ctx.colors.at(cfg.color, colorPos(cfg.color, band, n, s, slots)), opacity)
-                when (cfg.style) {
-                    RadialStyle.BARS -> {
-                        paint.color = color
-                        c.drawLine(cx + ca * r0, cy + sa * r0, cx + ca * (r0 + len), cy + sa * (r0 + len), paint)
-                    }
-                    RadialStyle.DOTS -> {
-                        fill.color = color
-                        c.drawCircle(cx + ca * (r0 + len), cy + sa * (r0 + len), paint.strokeWidth * 0.6f, fill)
-                    }
-                    RadialStyle.LINE -> {
-                        val x = cx + ca * (r0 + len)
-                        val y = cy + sa * (r0 + len)
-                        if (s == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        val cx = g.width * cfg.centerX
+        val cy = g.height * cfg.centerY
+        val aspect = cfg.aspect
+        val beatBoost = 1f + cfg.beatScale * ctx.beatEnv * ctx.beatStrength * 0.3f
+        val bassBoost = 1f + cfg.bassScale * f.bass * BASS_SCALE
+        val r0 = g.minSide * cfg.radius * beatBoost * bassBoost
+        val maxLen = g.minSide * cfg.length
+        val n = f.bandCount
+        val slots = (if (cfg.barCount > 0) cfg.barCount else if (cfg.mirror) n * 2 else n).coerceIn(2, MAX_SLOTS)
+        val half = if (cfg.mirror) max(1, slots / 2) else slots
+        val full = cfg.arc >= 0.999f
+        val angleDenom = if (full) slots else slots - 1
+        val startRad = (cfg.startAngle / 180f * PI).toFloat()
+        val opacity = cfg.color.opacity
+        val thick = g.dp(cfg.thicknessDp)
+        paint.strokeWidth = thick
+        paint.strokeCap = if (cfg.roundCaps) Paint.Cap.ROUND else Paint.Cap.BUTT
+
+        // Filled disc and thin base circle under the bars.
+        oval.set(cx - r0, cy - r0 * aspect, cx + r0, cy + r0 * aspect)
+        if (cfg.centerFill > 0.01f) {
+            fill.color = ColorResolver.withAlpha(ctx.colors.at(cfg.color, 0f), cfg.centerFill * opacity * (0.6f + 0.4f * f.level))
+            c.drawOval(oval, fill)
+        }
+        if (cfg.baseCircle > 0.01f) {
+            val w = paint.strokeWidth
+            paint.strokeWidth = max(g.dp(1f), thick * 0.4f)
+            paint.color = ColorResolver.withAlpha(ctx.colors.at(cfg.color, 0.5f), cfg.baseCircle * opacity)
+            val startDeg = -90f + cfg.startAngle + rotation * 360f
+            c.drawArc(oval, startDeg, cfg.arc * 360f, false, paint)
+            paint.strokeWidth = w
+        }
+
+        val lineLike = cfg.style == RadialStyle.LINE || cfg.style == RadialStyle.FILLED
+        if (lineLike) path.rewind()
+        for (s in 0 until slots) {
+            // 0..1 position in the spectrum: mirrored rings run bass → treble → bass.
+            val k = if (cfg.mirror && s >= half) slots - 1 - s else s
+            val t = (if (half > 1) k.toFloat() / (half - 1) else 0f).coerceIn(0f, 1f)
+            val v = sample(f.bands, n, t)
+            val a = (-PI / 2 + startRad + 2.0 * PI * (cfg.arc * s / angleDenom + rotation)).toFloat()
+            val ca = cos(a)
+            val sa = sin(a) * aspect
+            val len = max(g.dp(2f), v * maxLen)
+            val rIn = when (cfg.direction) {
+                RadialDirection.OUT -> r0
+                RadialDirection.IN -> max(0f, r0 - len)
+                RadialDirection.BOTH -> max(0f, r0 - len / 2f)
+            }
+            val rOut = when (cfg.direction) {
+                RadialDirection.OUT -> r0 + len
+                RadialDirection.IN -> r0
+                RadialDirection.BOTH -> r0 + len / 2f
+            }
+            outer[s * 2] = cx + ca * rOut
+            outer[s * 2 + 1] = cy + sa * rOut
+            inner[s * 2] = cx + ca * rIn
+            inner[s * 2 + 1] = cy + sa * rIn
+            // The moving end: inward rings move their inner end.
+            val tipX = if (cfg.direction == RadialDirection.IN) inner[s * 2] else outer[s * 2]
+            val tipY = if (cfg.direction == RadialDirection.IN) inner[s * 2 + 1] else outer[s * 2 + 1]
+            val pos = if (cfg.color.mode == ColorMode.BANDS || cfg.color.mode == ColorMode.ALBUM) t else s.toFloat() / (slots - 1)
+            val color = ColorResolver.withAlpha(ctx.colors.at(cfg.color, pos), opacity)
+            when (cfg.style) {
+                RadialStyle.BARS -> {
+                    paint.color = color
+                    c.drawLine(inner[s * 2], inner[s * 2 + 1], outer[s * 2], outer[s * 2 + 1], paint)
+                }
+                RadialStyle.DOTS -> {
+                    fill.color = color
+                    c.drawCircle(tipX, tipY, thick * 0.6f, fill)
+                }
+                RadialStyle.SEGMENTS -> {
+                    paint.color = color
+                    val seg = thick * SEGMENT_LEN
+                    val step = seg + thick * SEGMENT_GAP
+                    val count = max(1, floor((rOut - rIn + thick * SEGMENT_GAP) / step).toInt())
+                    for (j in 0 until count) {
+                        val r1 = rIn + j * step
+                        val r2 = r1 + seg
+                        c.drawLine(cx + ca * r1, cy + sa * r1, cx + ca * r2, cy + sa * r2, paint)
                     }
                 }
+                RadialStyle.LINE, RadialStyle.FILLED -> {
+                    if (s == 0) path.moveTo(tipX, tipY) else path.lineTo(tipX, tipY)
+                }
             }
-            if (cfg.style == RadialStyle.LINE) {
-                path.close()
-                paint.color = ColorResolver.withAlpha(ctx.colors.at(cfg.color, 0.5f), opacity)
-                c.drawPath(path, paint)
+            if (cfg.peakDots && !lineLike) {
+                val pk = sample(f.peaks, n, t) * maxLen
+                if (pk > len + g.dp(1f)) {
+                    val rp = when (cfg.direction) {
+                        RadialDirection.OUT -> r0 + pk
+                        RadialDirection.IN -> max(0f, r0 - pk)
+                        RadialDirection.BOTH -> r0 + pk / 2f
+                    }
+                    fill.color = ColorResolver.withAlpha(ColorResolver.lerpColor(color, 0xFFFFFFFF.toInt(), 0.5f), opacity * 0.9f)
+                    c.drawCircle(cx + ca * rp, cy + sa * rp, max(g.dp(1.5f), thick * 0.45f), fill)
+                }
             }
         }
+        if (lineLike) {
+            val lineColor = ColorResolver.withAlpha(ctx.colors.at(cfg.color, 0.5f), opacity)
+            if (cfg.style == RadialStyle.FILLED) {
+                // Area between the circle and the tips: tips forward, base points backward.
+                for (s in slots - 1 downTo 0) {
+                    val bx = if (cfg.direction == RadialDirection.IN) outer[s * 2] else inner[s * 2]
+                    val by = if (cfg.direction == RadialDirection.IN) outer[s * 2 + 1] else inner[s * 2 + 1]
+                    path.lineTo(bx, by)
+                }
+                path.close()
+                fill.color = ColorResolver.withAlpha(lineColor, opacity * FILL_ALPHA)
+                c.drawPath(path, fill)
+                // Outline only along the tips.
+                path.rewind()
+                for (s in 0 until slots) {
+                    val x = if (cfg.direction == RadialDirection.IN) inner[s * 2] else outer[s * 2]
+                    val y = if (cfg.direction == RadialDirection.IN) inner[s * 2 + 1] else outer[s * 2 + 1]
+                    if (s == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+            }
+            if (full) path.close()
+            paint.color = lineColor
+            c.drawPath(path, paint)
+        }
+    }
+
+    /** Linear read of [values] (first [n] used) at position [t] 0..1. */
+    private fun sample(values: FloatArray, n: Int, t: Float): Float {
+        if (n <= 1) return values[0]
+        val idx = t * (n - 1)
+        val i0 = idx.toInt().coerceIn(0, n - 1)
+        val i1 = min(i0 + 1, n - 1)
+        val fr = idx - i0
+        return values[i0] * (1 - fr) + values[i1] * fr
+    }
+
+    companion object {
+        const val MAX_SLOTS = 180
+        /** Ring growth at full bass for "Breathe with bass" = 100%. */
+        const val BASS_SCALE = 0.35f
+        /** Extra turns per second at full beat for "Spin on beats" = 100%. */
+        const val BEAT_SPIN_RATE = 1.6f
+        const val SEGMENT_LEN = 1.1f
+        const val SEGMENT_GAP = 0.7f
+        const val FILL_ALPHA = 0.4f
     }
 }
 
@@ -351,6 +469,7 @@ class PulseLayerRenderer {
     }
     private val paint = Paint()
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
 
     fun draw(canvas: Canvas, ctx: RenderContext) {
         val cfg = ctx.look.pulse
@@ -385,17 +504,28 @@ class PulseLayerRenderer {
                 val cx = if (radial.enabled) g.width * radial.centerX else g.width / 2f
                 val cy = if (radial.enabled) g.height * radial.centerY else g.height / 2f
                 val progress = 1f - ctx.beatEnv
-                val r = g.minSide * (RING_START + RING_GROWTH * progress)
-                ring.strokeWidth = g.dp(RING_WIDTH_DP) * ctx.beatEnv + g.dp(1f)
-                ring.color = ColorResolver.withAlpha(color, alpha)
-                canvas.drawCircle(cx, cy, r, ring)
+                val r = g.minSide * (cfg.ringStart + cfg.ringGrowth * progress)
+                val width = g.dp(cfg.ringWidthDp) * ctx.beatEnv + g.dp(1f)
+                if (cfg.ringFill > 0.01f) {
+                    fill.color = ColorResolver.withAlpha(color, alpha * cfg.ringFill * RING_FILL_ALPHA)
+                    canvas.drawCircle(cx, cy, r, fill)
+                }
+                ring.strokeWidth = width
+                // Extra rings ripple inside the first one, a little fainter each.
+                val gap = width * 1.5f + g.minSide * RING_GAP
+                for (i in 0 until cfg.ringCount.coerceIn(1, 3)) {
+                    val ri = r - gap * i
+                    if (ri <= 0f) break
+                    ring.color = ColorResolver.withAlpha(color, alpha * (1f - RING_ECHO_FADE * i))
+                    canvas.drawCircle(cx, cy, ri, ring)
+                }
             }
         }
     }
 
     companion object {
-        const val RING_START = 0.15f
-        const val RING_GROWTH = 0.7f
-        const val RING_WIDTH_DP = 10f
+        const val RING_GAP = 0.03f
+        const val RING_ECHO_FADE = 0.3f
+        const val RING_FILL_ALPHA = 0.35f
     }
 }

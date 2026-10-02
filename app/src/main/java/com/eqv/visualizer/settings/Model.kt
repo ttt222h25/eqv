@@ -26,7 +26,46 @@ data class AppSettings(
     val performance: Performance = Performance(),
     val debug: DebugOptions = DebugOptions(),
     val onboardingDone: Boolean = false,
+    /** Full-screen "green screen room" (global, not part of presets). */
+    val room: Room = Room(),
+    /** Guides already shown once (by screen name), so they only pop up the first time. */
+    val guidesSeen: Set<String> = emptySet(),
+    /** Coach cards at the top of each Create step. */
+    val craftTips: Boolean = true,
 )
+
+/**
+ * The room: the visuals full screen on a plain background you pick (chroma green for keying
+ * in a video editor, black for a light show, any color you like).
+ */
+@Serializable
+data class Room(
+    val background: Int = RoomColors.GREEN,
+    /** Draw the preset's screen filter in the room (off keeps the key color clean). */
+    val showFilter: Boolean = false,
+    /** Show the song name and preset in a corner. */
+    val showInfo: Boolean = false,
+)
+
+object RoomColors {
+    const val GREEN: Int = 0xFF00B140.toInt()
+    const val BRIGHT_GREEN: Int = 0xFF00FF00.toInt()
+    const val BLUE: Int = 0xFF0047BB.toInt()
+    const val MAGENTA: Int = 0xFFFF00FF.toInt()
+    const val BLACK: Int = 0xFF000000.toInt()
+    const val WHITE: Int = 0xFFFFFFFF.toInt()
+    const val GREY: Int = 0xFF808080.toInt()
+
+    val presets: List<Pair<String, Int>> = listOf(
+        "Green screen" to GREEN,
+        "Bright green" to BRIGHT_GREEN,
+        "Blue screen" to BLUE,
+        "Magenta" to MAGENTA,
+        "Black" to BLACK,
+        "White" to WHITE,
+        "Grey" to GREY,
+    )
+}
 
 @Serializable
 data class Preset(
@@ -141,7 +180,11 @@ data class BarsLayer(
 )
 
 @Serializable
-enum class RadialStyle { BARS, DOTS, LINE }
+enum class RadialStyle { BARS, DOTS, LINE, FILLED, SEGMENTS }
+
+/** Which way the ring's bars grow from the circle. */
+@Serializable
+enum class RadialDirection { OUT, IN, BOTH }
 
 @Serializable
 data class RadialLayer(
@@ -161,6 +204,26 @@ data class RadialLayer(
     val mirror: Boolean = true,
     /** Scale the ring on beats, 0..1. */
     val beatScale: Float = 0.25f,
+    val direction: RadialDirection = RadialDirection.OUT,
+    /** How much of the circle is used, 0.1..1 (0.5 = half ring). */
+    val arc: Float = 1f,
+    /** Where the ring starts, in degrees clockwise from the top. */
+    val startAngle: Float = 0f,
+    /** Bars around the ring; 0 = one per band (Motion → Bands). */
+    val barCount: Int = 0,
+    /** 1 = circle, below 1 = wide oval, above 1 = tall oval. */
+    val aspect: Float = 1f,
+    /** The ring breathes with the bass all the time, 0..1. */
+    val bassScale: Float = 0f,
+    /** Spin kick on each beat, 0..1. */
+    val beatSpin: Float = 0f,
+    /** Opacity of a thin circle drawn at the base of the bars, 0..1. */
+    val baseCircle: Float = 0f,
+    /** Opacity of a filled disc inside the ring, 0..1. */
+    val centerFill: Float = 0f,
+    /** Small dots that hang at recent peaks. */
+    val peakDots: Boolean = false,
+    val roundCaps: Boolean = true,
 )
 
 @Serializable
@@ -198,6 +261,16 @@ data class PulseLayer(
     val decayMs: Float = 260f,
     /** Vignette inner clear area as fraction of the screen diagonal. */
     val size: Float = 0.55f,
+    /** RING: starting size as fraction of the short screen side. */
+    val ringStart: Float = 0.15f,
+    /** RING: how far it grows while it fades, fraction of the short screen side. */
+    val ringGrowth: Float = 0.7f,
+    /** RING: line width in dp at the moment of the beat. */
+    val ringWidthDp: Float = 10f,
+    /** RING: 1..3 rings following each other. */
+    val ringCount: Int = 1,
+    /** RING: fill the ring with a soft glow instead of only a line, 0..1. */
+    val ringFill: Float = 0f,
 )
 
 // ---------------------------------------------------------------- screen filter
@@ -450,6 +523,8 @@ object Limits {
     const val SILENCE_LEVEL = 0.015f
     const val MIN_HZ = 20f
     const val MAX_HZ = 20000f
+    const val MIN_RING_BARS = 8
+    const val MAX_RING_BARS = 180
 }
 
 fun Look.sanitized(): Look = copy(
@@ -462,6 +537,15 @@ fun Look.sanitized(): Look = copy(
         attackMs = motion.attackMs.coerceIn(1f, 1000f),
         decayMs = motion.decayMs.coerceIn(1f, 3000f),
         rangeDb = motion.rangeDb.coerceIn(12f, 90f),
+    ),
+    radial = radial.copy(
+        arc = radial.arc.coerceIn(0.1f, 1f),
+        barCount = if (radial.barCount == 0) 0 else radial.barCount.coerceIn(Limits.MIN_RING_BARS, Limits.MAX_RING_BARS),
+        aspect = radial.aspect.coerceIn(0.4f, 2.5f),
+    ),
+    pulse = pulse.copy(
+        ringCount = pulse.ringCount.coerceIn(1, 3),
+        ringWidthDp = pulse.ringWidthDp.coerceIn(1f, 40f),
     ),
     filter = filter.copy(
         scanlineDp = filter.scanlineDp.coerceIn(1f, 12f),

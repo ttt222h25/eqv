@@ -25,7 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +54,8 @@ enum class Screen(val title: String, val preview: Boolean = true) {
     CRAFT("Create"),
     DEBUG("Debug", preview = false),
     PERMISSIONS("Setup", preview = false),
+    ROOM("Room", preview = false),
+    GUIDES("Guides", preview = false),
 }
 
 class MainActivity : ComponentActivity() {
@@ -74,11 +78,23 @@ fun App(start: Screen = Screen.HOME) {
     val stack = remember { mutableStateListOf(Screen.HOME).apply { if (start != Screen.HOME) add(start) } }
     val screen = stack.last()
     val go: (Screen) -> Unit = { stack.add(it) }
-    BackHandler(enabled = stack.size > 1) { stack.removeAt(stack.lastIndex) }
+    val back: () -> Unit = { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
+    var guideOpen by remember { mutableStateOf<Guide?>(null) }
+    BackHandler(enabled = stack.size > 1) { back() }
 
+    // The room is the visuals full screen: no header, no bars.
+    if (screen == Screen.ROOM) {
+        RoomScreen(onExit = back, onHelp = { guideOpen = Guides.room })
+        guideOpen?.let { g -> GuideDialog(g) { guideOpen = null } }
+        return
+    }
+
+    val guide = Guides.forScreen(screen)
     Column(Modifier.fillMaxSize().background(Nothing.Black).systemBarsPadding()) {
-        Header(screen, canGoBack = stack.size > 1) { stack.removeAt(stack.lastIndex) }
+        Header(screen, canGoBack = stack.size > 1, onBack = back, onHelp = guide?.let { g -> { guideOpen = g } })
         if (screen.preview) LivePreview(height = if (screen == Screen.HOME) 280.dp else 230.dp)
+        // Create has its own tips per step; every other page offers its guide once.
+        if (guide != null && screen != Screen.CRAFT) GuideBanner(guide) { guideOpen = guide }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (screen) {
                 Screen.HOME -> HomeScreen(go)
@@ -92,17 +108,20 @@ fun App(start: Screen = Screen.HOME) {
                 Screen.AUDIO -> AudioScreen()
                 Screen.PERFORMANCE -> PerformanceScreen()
                 Screen.PRESETS -> PresetsScreen(go)
-                Screen.LAB -> TestLabScreen()
-                Screen.CRAFT -> CraftScreen(onDone = { if (stack.size > 1) stack.removeAt(stack.lastIndex) })
+                Screen.LAB -> TestLabScreen(go)
+                Screen.CRAFT -> CraftScreen(onDone = back)
                 Screen.DEBUG -> DebugScreen()
                 Screen.PERMISSIONS -> PermissionsScreen()
+                Screen.GUIDES -> GuidesScreen()
+                Screen.ROOM -> {}
             }
         }
     }
+    guideOpen?.let { g -> GuideDialog(g) { guideOpen = null } }
 }
 
 @Composable
-private fun Header(screen: Screen, canGoBack: Boolean, onBack: () -> Unit) {
+private fun Header(screen: Screen, canGoBack: Boolean, onBack: () -> Unit, onHelp: (() -> Unit)?) {
     Row(
         Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -122,6 +141,11 @@ private fun Header(screen: Screen, canGoBack: Boolean, onBack: () -> Unit) {
         if (screen == Screen.HOME) {
             Spacer(Modifier.width(6.dp))
             Box(Modifier.padding(top = 18.dp).size(9.dp).clip(CircleShape).background(Nothing.Red))
+        }
+        Spacer(Modifier.weight(1f))
+        if (onHelp != null) {
+            HelpButton(onHelp)
+            Spacer(Modifier.width(8.dp))
         }
     }
 }
