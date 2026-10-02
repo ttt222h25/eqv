@@ -37,7 +37,9 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
         const val H = 1400
         const val DENSITY = 2.875f / 2f
         const val HEADER = 56
-        const val FPS = 60
+        const val FPS = 30
+        /** Rendering starts here (the analyzer and filter drive warm up on audio before it). */
+        const val WARMUP_SEC = 2
     }
 
     @Test
@@ -67,7 +69,7 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
         var midFrame = -1
         var lastSeq = -1
         val total = FPS * 6
-        for (i in 0 until total) {
+        for (i in FPS * WARMUP_SEC until total) {
             val now = 1_000_000_000L + i * 1_000_000_000L / FPS
             audio.advanceTo(now)
             canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR)
@@ -78,7 +80,7 @@ class OverlayShots(private val index: Int, private val preset: Preset) {
 
             val seq = renderer.ctx.frame.beatSeq
             if (i > FPS * 3 && hitFrame < 0 && lastSeq >= 0 && seq > lastSeq) {
-                hitFrame = i + 2
+                hitFrame = i + 1
                 midFrame = i + FPS / 4
             }
             lastSeq = seq

@@ -105,6 +105,10 @@ tasks.withType<Test>().configureEach {
         systemProperty("roborazzi.test.record", "true")
         systemProperty("shots.dir", rootProject.file("shots").absolutePath)
         maxHeapSize = "3g"
+        testLogging {
+            events("started", "passed", "failed", "skipped")
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
     } else {
         filter.excludeTestsMatching("com.eqv.visualizer.shots.*")
     }

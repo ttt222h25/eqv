@@ -40,9 +40,10 @@ class UiShots(private val screen: Screen) {
         // A busy moment of the demo song, so the live preview shows something.
         val nothing = BuiltInPresets.all.first()
         SimulatedAudio(nothing.look, AudioEngine.ring).advanceTo(3_200_000_000L)
+        // Manual clock: the preview and meters animate forever, so "idle" would never come.
+        rule.mainClock.autoAdvance = false
         rule.setContent { EqvTheme { App(screen) } }
         rule.mainClock.advanceTimeBy(800)
-        rule.waitForIdle()
         rule.onRoot().captureRoboImage(File(shotsDir, "ui-%02d-%s.png".format(screen.ordinal, screen.name.lowercase())).path)
     }
 }
