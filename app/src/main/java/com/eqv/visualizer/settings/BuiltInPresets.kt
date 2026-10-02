@@ -68,7 +68,7 @@ object BuiltInPresets {
                             thicknessDp = 2f, glowWidthDp = 14f, length = 0.25f, reactivity = 0.1f,
                         ),
                         bars = BarsLayer(
-                            style = BarsStyle.DOTS, mirror = true, height = 0.1f, thickness = 0.7f,
+                            style = BarsStyle.DOTS, mirror = true, height = 0.08f, thickness = 0.7f, span = 0.9f, marginDp = 10f,
                             color = ColorSpec(mode = ColorMode.BANDS, primary = red, secondary = white, tertiary = white, glow = 0.2f),
                         ),
                         pulse = noPulse,
@@ -94,11 +94,11 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(enabled = false),
                         bars = BarsLayer(
-                            style = BarsStyle.DOTS, height = 0.14f, thickness = 0.8f, marginDp = 6f,
+                            style = BarsStyle.DOTS, height = 0.1f, thickness = 0.8f, span = 0.9f, marginDp = 10f,
                             color = gradient(white, grey, glow = 0.15f),
                         ),
                         pulse = noPulse,
-                        motion = Motion(bandCount = 20, decayMs = 200f, peakHoldMs = 700f),
+                        motion = Motion(bandCount = 20, decayMs = 200f),
                     ),
                 ),
                 // Album colors, big mirrored bars; set it and drive.
@@ -107,11 +107,11 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(color = album(glow = 0.5f), thicknessDp = 2.5f, glowWidthDp = 24f, reactivity = 0.3f),
                         bars = BarsLayer(
-                            mirror = true, height = 0.16f, thickness = 0.66f,
+                            mirror = true, height = 0.11f, thickness = 0.6f,
                             color = album(glow = 0.45f),
                         ),
                         pulse = noPulse,
-                        motion = Motion(bandCount = 40, sensitivity = 1.15f),
+                        motion = Motion(bandCount = 28, sensitivity = 1.1f),
                     ),
                 ),
             ),
@@ -142,7 +142,7 @@ object BuiltInPresets {
                         wave = WaveLayer(
                             enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
                             color = solid(white, glow = 0.5f, opacity = 0.8f),
-                            positionY = 0.82f, amplitude = 0.06f, thicknessDp = 2f, smoothness = 0.4f,
+                            positionY = 0.93f, amplitude = 0.035f, thicknessDp = 2f, smoothness = 0.5f,
                         ),
                         pulse = noPulse,
                         filter = FilterStyles.of(FilterStyle.VHS),
@@ -172,7 +172,7 @@ object BuiltInPresets {
                         wave = WaveLayer(
                             enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
                             color = solid(PHOSPHOR, glow = 0.9f),
-                            positionY = 0.78f, amplitude = 0.07f, thicknessDp = 2f, smoothness = 0.35f,
+                            positionY = 0.93f, amplitude = 0.035f, thicknessDp = 2f, smoothness = 0.45f,
                         ),
                         pulse = noPulse,
                         filter = FilterStyles.of(FilterStyle.NIGHT_VISION),
@@ -185,7 +185,7 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(enabled = false),
                         bars = BarsLayer(
-                            style = BarsStyle.BLOCKS, height = 0.14f, thickness = 0.85f, cornerRadiusDp = 0f, span = 0.9f, marginDp = 12f,
+                            style = BarsStyle.BLOCKS, height = 0.12f, thickness = 0.85f, cornerRadiusDp = 0f, span = 0.9f, marginDp = 12f, peakHold = true,
                             color = bands(GB_DARK, GB_MID, GB_LIGHT, glow = 0.1f),
                         ),
                         pulse = noPulse,
@@ -199,7 +199,7 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(enabled = false),
                         bars = BarsLayer(
-                            style = BarsStyle.DOTS, mirror = true, height = 0.14f, thickness = 0.8f,
+                            style = BarsStyle.DOTS, mirror = true, height = 0.1f, thickness = 0.8f, span = 0.9f, marginDp = 10f,
                             color = bands(red, white, white, glow = 0.3f),
                         ),
                         pulse = noPulse,
@@ -255,8 +255,8 @@ object BuiltInPresets {
                         bars = off,
                         radial = RadialLayer(
                             enabled = true,
-                            color = ColorSpec(mode = ColorMode.ALBUM, glow = 0.7f),
-                            radius = 0.2f, length = 0.16f, rotationSpeed = 0.03f,
+                            color = ColorSpec(mode = ColorMode.ALBUM, glow = 0.7f, opacity = 0.85f),
+                            radius = 0.15f, length = 0.08f, rotationSpeed = 0.03f,
                         ),
                         pulse = PulseLayer(enabled = true, style = PulseStyle.RING, color = ColorSpec(mode = ColorMode.ALBUM), strength = 0.4f, decayMs = 420f),
                         motion = Motion(bandCount = 64, decayMs = 260f),
@@ -271,7 +271,7 @@ object BuiltInPresets {
                             thicknessDp = 2f, glowWidthDp = 30f, reactivity = 0.12f, idleLevel = 0.1f,
                         ),
                         bars = BarsLayer(
-                            height = 0.07f, thickness = 0.55f, cornerRadiusDp = 10f, mirror = true, peakHold = false,
+                            height = 0.07f, thickness = 0.55f, cornerRadiusDp = 10f, mirror = true,
                             color = gradient(PEACH, PINK, glow = 0.4f, opacity = 0.85f),
                         ),
                         pulse = noPulse,
@@ -303,7 +303,7 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(
                             color = gradient(ORANGE, MAGENTA, glow = 0.75f),
-                            thicknessDp = 2.5f, glowWidthDp = 34f, reactivity = 0.2f, idleLevel = 0.1f,
+                            thicknessDp = 2.5f, glowWidthDp = 28f, reactivity = 0.2f, idleLevel = 0.1f,
                         ),
                         bars = BarsLayer(
                             mirror = true, height = 0.1f, thickness = 0.6f, cornerRadiusDp = 8f,
@@ -344,14 +344,14 @@ object BuiltInPresets {
                         edge = EdgeLayer(
                             style = EdgeStyle.RUNNING,
                             color = ColorSpec(mode = ColorMode.RAINBOW, rainbowSpeed = 0.2f, glow = 0.9f),
-                            thicknessDp = 4f, glowWidthDp = 40f, length = 0.5f, speed = 0.35f, reactivity = 0.6f,
+                            thicknessDp = 3.5f, glowWidthDp = 30f, length = 0.5f, speed = 0.35f, reactivity = 0.6f,
                         ),
                         bars = BarsLayer(
-                            position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.BLOCKS, mirror = true, height = 0.09f,
+                            position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.BLOCKS, mirror = true, height = 0.06f, thickness = 0.55f,
                             color = ColorSpec(mode = ColorMode.RAINBOW, rainbowSpeed = 0.2f, glow = 0.6f),
                         ),
                         pulse = noPulse,
-                        motion = Motion(bandCount = 48, sensitivity = 1.3f, attackMs = 10f, decayMs = 160f),
+                        motion = Motion(bandCount = 32, sensitivity = 1.2f, attackMs = 10f, decayMs = 160f),
                         beat = BeatConfig(sensitivity = 0.65f, rippleStrength = 0.9f),
                     ),
                 ),
@@ -362,15 +362,15 @@ object BuiltInPresets {
                         edge = EdgeLayer(
                             style = EdgeStyle.SPLIT,
                             color = rainbow(0.45f, glow = 1f),
-                            thicknessDp = 4f, glowWidthDp = 44f, length = 0.45f, reactivity = 0.75f,
+                            thicknessDp = 3.5f, glowWidthDp = 32f, length = 0.45f, reactivity = 0.75f,
                         ),
                         bars = BarsLayer(
-                            position = BarsPosition.SIDES, style = BarsStyle.BLOCKS, mirror = true, height = 0.12f, thickness = 0.7f,
+                            position = BarsPosition.SIDES, style = BarsStyle.BLOCKS, mirror = true, height = 0.06f, thickness = 0.6f,
                             color = rainbow(0.45f, glow = 0.7f),
                         ),
                         pulse = noPulse,
                         filter = FilterStyles.of(FilterStyle.GLITCH).copy(scanlines = 0f, mask = 0f, grain = 0.1f),
-                        motion = Motion(bandCount = 40, sensitivity = 1.4f, attackMs = 8f, decayMs = 130f),
+                        motion = Motion(bandCount = 32, sensitivity = 1.25f, attackMs = 8f, decayMs = 130f),
                         beat = BeatConfig(sensitivity = 0.7f, cooldownMs = 150f, rippleStrength = 1f),
                     ),
                 ),
@@ -387,7 +387,7 @@ object BuiltInPresets {
                         radial = RadialLayer(
                             enabled = true, style = RadialStyle.DOTS,
                             color = rainbow(0.15f, glow = 0.8f),
-                            radius = 0.18f, length = 0.2f, thicknessDp = 5f, rotationSpeed = 0.12f, beatScale = 0.4f,
+                            radius = 0.15f, length = 0.1f, thicknessDp = 4f, rotationSpeed = 0.12f, beatScale = 0.25f,
                         ),
                         pulse = PulseLayer(enabled = true, style = PulseStyle.RING, color = solid(GOLD), strength = 0.5f, decayMs = 360f),
                         motion = Motion(bandCount = 48, sensitivity = 1.2f, attackMs = 15f, decayMs = 200f),
@@ -400,10 +400,10 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(
                             color = gradient(CYAN, MAGENTA, glow = 0.9f),
-                            thicknessDp = 3f, glowWidthDp = 36f, reactivity = 0.45f,
+                            thicknessDp = 3f, glowWidthDp = 26f, reactivity = 0.45f,
                         ),
                         bars = BarsLayer(
-                            position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.LINE, mirror = true, height = 0.08f,
+                            position = BarsPosition.TOP_AND_BOTTOM, style = BarsStyle.LINE, mirror = true, height = 0.05f,
                             color = bands(MAGENTA, PURPLE, CYAN, glow = 0.9f),
                         ),
                         pulse = noPulse,
@@ -421,7 +421,7 @@ object BuiltInPresets {
                             thicknessDp = 3f, glowWidthDp = 40f, reactivity = 0.6f,
                         ),
                         bars = BarsLayer(
-                            position = BarsPosition.TOP, mirror = true, height = 0.13f, thickness = 0.5f, cornerRadiusDp = 3f,
+                            position = BarsPosition.TOP, mirror = true, height = 0.07f, thickness = 0.5f, cornerRadiusDp = 3f,
                             color = gradient(white, AMBER, glow = 0.7f),
                         ),
                         pulse = noPulse,
@@ -455,10 +455,10 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(
                             color = gradient(red, ORANGE, glow = 0.8f),
-                            thicknessDp = 4f, glowWidthDp = 36f, reactivity = 0.5f,
+                            thicknessDp = 3.5f, glowWidthDp = 28f, reactivity = 0.5f,
                         ),
                         bars = BarsLayer(
-                            style = BarsStyle.BLOCKS, height = 0.18f, thickness = 0.72f,
+                            style = BarsStyle.BLOCKS, height = 0.11f, thickness = 0.7f, span = 0.92f, marginDp = 8f,
                             color = bands(red, ORANGE, YELLOW, glow = 0.55f),
                         ),
                         pulse = noPulse,
@@ -498,7 +498,7 @@ object BuiltInPresets {
                             thicknessDp = 1.5f, glowWidthDp = 30f, reactivity = 0.12f, idleLevel = 0.06f, cutoutRing = false,
                         ),
                         bars = BarsLayer(
-                            mirror = true, height = 0.06f, thickness = 0.5f, peakHold = false,
+                            mirror = true, height = 0.06f, thickness = 0.5f,
                             color = gradient(OCEAN, VIOLET, glow = 0.4f, opacity = 0.5f),
                         ),
                         pulse = noPulse,
@@ -550,7 +550,7 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(enabled = false),
                         bars = BarsLayer(
-                            style = BarsStyle.LINE, height = 0.035f, thickness = 0.5f, span = 0.6f, peakHold = false,
+                            style = BarsStyle.LINE, height = 0.035f, thickness = 0.5f, span = 0.6f,
                             color = solid(white, glow = 0.15f, opacity = 0.45f),
                         ),
                         pulse = noPulse,
@@ -570,7 +570,7 @@ object BuiltInPresets {
                         wave = WaveLayer(
                             enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
                             color = solid(GOLD, glow = 0.6f, opacity = 0.85f),
-                            positionY = 0.88f, amplitude = 0.05f, thicknessDp = 1.5f, smoothness = 0.5f,
+                            positionY = 0.93f, amplitude = 0.035f, thicknessDp = 1.5f, smoothness = 0.5f,
                         ),
                         pulse = noPulse,
                         motion = Motion(bandCount = 32, attackMs = 40f, decayMs = 600f, sensitivity = 1f, tiltDbPerOctave = 4.5f),
@@ -592,7 +592,7 @@ object BuiltInPresets {
                             thicknessDp = 3f, glowWidthDp = 18f, length = 0.2f, reactivity = 0.5f,
                         ),
                         bars = BarsLayer(
-                            style = BarsStyle.BLOCKS, height = 0.15f, thickness = 0.8f, cornerRadiusDp = 0f, span = 0.9f,
+                            style = BarsStyle.BLOCKS, height = 0.12f, thickness = 0.8f, cornerRadiusDp = 0f, span = 0.9f, marginDp = 12f, peakHold = true,
                             color = bands(PHOSPHOR, YELLOW, red, glow = 0.35f),
                         ),
                         pulse = noPulse,
@@ -607,7 +607,7 @@ object BuiltInPresets {
                     Look(
                         edge = EdgeLayer(
                             color = gradient(MAGENTA, CYAN, glow = 0.8f),
-                            thicknessDp = 2.5f, glowWidthDp = 32f, reactivity = 0.3f,
+                            thicknessDp = 2.5f, glowWidthDp = 26f, reactivity = 0.3f,
                         ),
                         bars = BarsLayer(
                             style = BarsStyle.LINE, mirror = true, height = 0.11f, thickness = 0.45f,
@@ -616,7 +616,7 @@ object BuiltInPresets {
                         wave = WaveLayer(
                             enabled = true, style = WaveStyle.LINE,
                             color = solid(CYAN, glow = 0.9f),
-                            positionY = 0.72f, amplitude = 0.04f, thicknessDp = 2f, smoothness = 0.7f,
+                            positionY = 0.9f, amplitude = 0.03f, thicknessDp = 2f, smoothness = 0.7f,
                         ),
                         pulse = noPulse,
                         filter = FilterLayer(
@@ -636,7 +636,7 @@ object BuiltInPresets {
                         wave = WaveLayer(
                             enabled = true, style = WaveStyle.LINE, source = WaveSourceKind.WAVEFORM,
                             color = solid(PHOSPHOR, glow = 0.9f),
-                            positionY = 0.5f, amplitude = 0.12f, thicknessDp = 2f, smoothness = 0.3f,
+                            positionY = 0.5f, amplitude = 0.08f, thicknessDp = 2f, smoothness = 0.35f,
                         ),
                         pulse = noPulse,
                         filter = FilterStyles.of(FilterStyle.CRT).copy(mask = 0f, tint = PHOSPHOR, tintAmount = 0.05f, beatFx = BeatFx.NONE),

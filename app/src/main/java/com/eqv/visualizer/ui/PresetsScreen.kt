@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.eqv.visualizer.settings.BuiltInPresets
@@ -102,48 +103,49 @@ fun PresetsScreen(go: (Screen) -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        FlowRow(
-            Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PrimaryButton("+ Create new") { go(Screen.CRAFT) }
-            GhostButton("Save current") { dialog = PresetDialog.SaveNew }
-            GhostButton("Import file") { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
-            GhostButton("Paste") { dialog = PresetDialog.Paste }
-            GhostButton("Export all") {
-                pendingExport = PresetOps.export(s.userPresets.ifEmpty { PresetOps.allPresets(s) })
-                exportLauncher.launch("eqv-presets.json")
-            }
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrimaryButton("+ Create") { go(Screen.CRAFT) }
+            GhostButton("Save a copy") { dialog = PresetDialog.SaveNew }
         }
-        Hint("Create new walks you through look, colors, timing and filter, then you name it. Tweaks save automatically to the preset you're on; \"Save current\" keeps a separate copy.")
+        Hint("Changes you make save to the preset you're on.")
         val active = PresetOps.find(s, s.activePresetId)
         if (active != null && PresetOps.isEdited(s, active.id)) {
-            Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-                GhostButton("Reset \"${active.name}\" to original") { repo.update { PresetOps.resetBuiltIn(it, active.id) } }
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                GhostButton("Reset \"${active.name}\"") { repo.update { PresetOps.resetBuiltIn(it, active.id) } }
             }
         }
         val sections = buildList {
             if (s.userPresets.isNotEmpty()) add("My presets" to s.userPresets)
             for (g in BuiltInPresets.groups) add(g.name to g.presets.map { PresetOps.find(s, it.id) ?: it })
         }
-        for ((title, list) in sections) for ((i, p) in list.withIndex()) {
-            if (i == 0) SectionTitle(title)
-            PresetRow(
-                p = p,
-                active = p.id == s.activePresetId,
-                edited = PresetOps.isEdited(s, p.id),
-                onReset = { repo.update { PresetOps.resetBuiltIn(it, p.id) } },
-                onApply = { repo.update { PresetOps.apply(it, p.id) } },
-                onRename = { dialog = PresetDialog.Rename(p) },
-                onDuplicate = { repo.update { PresetOps.duplicate(it, p.id) } },
-                onDelete = { repo.update { PresetOps.delete(it, p.id) } },
-                onExport = {
-                    pendingExport = PresetOps.export(listOf(p))
-                    exportLauncher.launch("eqv-${p.name.lowercase().replace(' ', '-')}.json")
-                },
-                onCopy = { copy(PresetOps.export(listOf(p))) },
-            )
+        for ((title, list) in sections) {
+            Group(title) {
+                for (p in list) {
+                    PresetRow(
+                        p = p,
+                        active = p.id == s.activePresetId,
+                        edited = PresetOps.isEdited(s, p.id),
+                        onReset = { repo.update { PresetOps.resetBuiltIn(it, p.id) } },
+                        onApply = { repo.update { PresetOps.apply(it, p.id) } },
+                        onRename = { dialog = PresetDialog.Rename(p) },
+                        onDuplicate = { repo.update { PresetOps.duplicate(it, p.id) } },
+                        onDelete = { repo.update { PresetOps.delete(it, p.id) } },
+                        onExport = {
+                            pendingExport = PresetOps.export(listOf(p))
+                            exportLauncher.launch("eqv-${p.name.lowercase().replace(' ', '-')}.json")
+                        },
+                        onCopy = { copy(PresetOps.export(listOf(p))) },
+                    )
+                }
+            }
+        }
+        Group("Share") {
+            NavRow("Import from file") { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+            NavRow("Paste preset text") { dialog = PresetDialog.Paste }
+            NavRow("Export all to a file") {
+                pendingExport = PresetOps.export(s.userPresets.ifEmpty { PresetOps.allPresets(s) })
+                exportLauncher.launch("eqv-presets.json")
+            }
         }
         Spacer(Modifier.height(32.dp))
     }
@@ -180,14 +182,14 @@ private fun PresetRow(
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onApply).padding(horizontal = 20.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onApply).padding(start = 18.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(if (active) Nothing.Red else Nothing.Line))
         Spacer(Modifier.size(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(p.name, style = MaterialTheme.typography.titleMedium)
-            Text(describe(p, edited), style = MaterialTheme.typography.bodySmall)
+            Text(p.name, style = MaterialTheme.typography.bodyLarge)
+            Text(describe(p, edited), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box {
             Text(
@@ -211,15 +213,15 @@ private fun PresetRow(
 private fun describe(p: Preset, edited: Boolean): String {
     val l = p.look
     val layers = listOfNotNull(
-        "edge".takeIf { l.edge.enabled },
-        "bars".takeIf { l.bars.enabled },
-        "radial".takeIf { l.radial.enabled },
-        "wave".takeIf { l.wave.enabled },
-        "pulse".takeIf { l.pulse.enabled },
-        "${l.filter.style.name.lowercase().replace('_', ' ')} filter".takeIf { l.filter.enabled },
-    ).joinToString(" + ").ifEmpty { "no layers" }
+        "Edge".takeIf { l.edge.enabled },
+        "Bars".takeIf { l.bars.enabled },
+        "Ring".takeIf { l.radial.enabled },
+        "Wave".takeIf { l.wave.enabled },
+        "Pulse".takeIf { l.pulse.enabled },
+        "${filterLabel(l.filter.style)} filter".takeIf { l.filter.enabled },
+    ).joinToString(" · ").ifEmpty { "Nothing on" }
     val extras = listOfNotNull("shake".takeIf { l.thump.enabled })
-    return (if (p.builtIn) (if (edited) "Built-in, edited · " else "Built-in · ") else "") + layers + if (extras.isNotEmpty()) " · " + extras.joinToString() else ""
+    return (if (edited) "Edited · " else "") + layers + if (extras.isNotEmpty()) " · " + extras.joinToString() else ""
 }
 
 @Composable

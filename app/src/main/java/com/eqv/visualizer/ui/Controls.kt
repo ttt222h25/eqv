@@ -2,13 +2,17 @@ package com.eqv.visualizer.ui
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -28,8 +32,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -40,12 +42,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
@@ -61,22 +71,46 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
+/** Small grey caps label above a [Group]. */
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text.uppercase(),
-        style = MaterialTheme.typography.labelLarge,
-        color = Nothing.RedText,
-        modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
+        style = MaterialTheme.typography.labelMedium,
+        color = Nothing.Grey,
+        modifier = modifier.padding(start = 28.dp, end = 20.dp, top = 18.dp, bottom = 8.dp),
     )
 }
 
+/**
+ * The building block of every page: an optional title, then rows on one rounded surface.
+ * Pages are a stack of these, so everything lines up the same way everywhere.
+ */
+@Composable
+fun Group(title: String? = null, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.fillMaxWidth()) {
+        if (title != null) SectionTitle(title) else Spacer(Modifier.height(8.dp))
+        Column(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(GroupShape)
+                .background(Nothing.Surface)
+                .padding(vertical = 6.dp),
+            content = content,
+        )
+    }
+}
+
+val GroupShape = RoundedCornerShape(24.dp)
+
+/** Grey explanation text. Inside a [Group] it lines up with the rows; outside, with the cards. */
 @Composable
 fun Hint(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
     )
 }
 
@@ -86,10 +120,10 @@ fun SwitchRow(label: String, checked: Boolean, sub: String? = null, onChange: (B
         Modifier
             .fillMaxWidth()
             .clickable { onChange(!checked) }
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall)
         }
@@ -117,26 +151,82 @@ fun SliderRow(
     steps: Int = 0,
     onChange: (Float) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+        Row(Modifier.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(format(value), style = MaterialTheme.typography.labelLarge, color = Nothing.Grey)
         }
-        Slider(
-            value = value.coerceIn(range.start, range.endInclusive),
-            onValueChange = onChange,
-            valueRange = range,
-            steps = steps,
-            colors = SliderDefaults.colors(
-                thumbColor = Nothing.White,
-                activeTrackColor = Nothing.Red,
-                inactiveTrackColor = Nothing.Line,
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent,
-            ),
-        )
+        // The slider keeps 10 dp of room for its thumb, so its track lines up with the label.
+        EqvSlider(value, range, onChange, Modifier.padding(horizontal = 8.dp), steps = steps)
     }
 }
+
+/**
+ * Slim slider: a thin track, the filled part in red, a round white thumb. Tap or drag anywhere
+ * on it. [steps] works like Material's (number of stops between the ends).
+ */
+@Composable
+fun EqvSlider(
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    steps: Int = 0,
+    enabled: Boolean = true,
+    onChangeFinished: (() -> Unit)? = null,
+) {
+    val span = (range.endInclusive - range.start).takeIf { it > 0f } ?: 1f
+    val fraction = ((value - range.start) / span).coerceIn(0f, 1f)
+    val onChangeState by rememberUpdatedState(onChange)
+    val onFinishedState by rememberUpdatedState(onChangeFinished)
+    fun valueAt(x: Float, width: Float, pad: Float): Float {
+        var f = ((x - pad) / (width - 2 * pad)).coerceIn(0f, 1f)
+        if (steps > 0) f = kotlin.math.round(f * (steps + 1)) / (steps + 1)
+        return range.start + f * span
+    }
+    Canvas(
+        modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .semantics {
+                progressBarRangeInfo = ProgressBarRangeInfo(value, range, steps)
+                if (enabled) {
+                    setProgress { v -> onChangeState(v.coerceIn(range.start, range.endInclusive)); true }
+                }
+            }
+            .then(
+                if (!enabled) Modifier else Modifier
+                    .pointerInput(range, steps) {
+                        val pad = SliderPad.toPx()
+                        detectTapGestures { o ->
+                            onChangeState(valueAt(o.x, size.width.toFloat(), pad))
+                            onFinishedState?.invoke()
+                        }
+                    }
+                    .pointerInput(range, steps) {
+                        val pad = SliderPad.toPx()
+                        detectHorizontalDragGestures(
+                            onDragEnd = { onFinishedState?.invoke() },
+                            onDragCancel = { onFinishedState?.invoke() },
+                        ) { change, _ ->
+                            change.consume()
+                            onChangeState(valueAt(change.position.x, size.width.toFloat(), pad))
+                        }
+                    },
+            ),
+    ) {
+        val pad = SliderPad.toPx()
+        val y = size.height / 2f
+        val track = 3.dp.toPx()
+        val x = pad + fraction * (size.width - 2 * pad)
+        drawLine(Nothing.Line, Offset(pad, y), Offset(size.width - pad, y), track, StrokeCap.Round)
+        drawLine(if (enabled) Nothing.Red else Nothing.DimGrey, Offset(pad, y), Offset(x, y), track, StrokeCap.Round)
+        drawCircle(if (enabled) Nothing.White else Nothing.Grey, 9.dp.toPx(), Offset(x, y))
+    }
+}
+
+/** Room at both ends so the thumb never gets clipped. */
+private val SliderPad = 10.dp
 
 @Composable
 fun IntSliderRow(label: String, value: Int, range: IntRange, suffix: String = "", step: Int = 1, onChange: (Int) -> Unit) {
@@ -154,8 +244,8 @@ fun IntSliderRow(label: String, value: Int, range: IntRange, suffix: String = ""
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> ChoiceRow(label: String?, options: List<T>, selected: T, name: (T) -> String, onSelect: (T) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
-        if (label != null) Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 6.dp))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp)) {
+        if (label != null) Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             for (o in options) Chip(name(o), o == selected) { onSelect(o) }
         }
@@ -181,20 +271,45 @@ fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** One option of a single choice, with a short explanation under it. */
 @Composable
-fun NavRow(title: String, sub: String? = null, trailing: String = "›", onClick: () -> Unit) {
+fun RadioRow(title: String, sub: String?, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(20.dp).clip(CircleShape).border(2.dp, if (selected) Nothing.Red else Nothing.Line, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(Nothing.Red))
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun NavRow(title: String, sub: String? = null, trailing: String = "›", value: String? = null, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = if (sub == null) 16.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall)
         }
-        Text(trailing, style = MaterialTheme.typography.headlineSmall, color = Nothing.Grey)
+        if (value != null) {
+            Text(value, style = MaterialTheme.typography.labelLarge, color = Nothing.Grey, maxLines = 1)
+            Spacer(Modifier.width(10.dp))
+        }
+        Text(trailing, style = MaterialTheme.typography.titleMedium, color = Nothing.DimGrey)
     }
 }
 
@@ -204,9 +319,8 @@ fun Card(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
         modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Nothing.Surface)
-            .border(1.dp, Nothing.Line, RoundedCornerShape(20.dp)),
+            .clip(GroupShape)
+            .background(Nothing.Surface),
     ) { content() }
 }
 
@@ -250,7 +364,7 @@ fun ColorSpecEditor(spec: ColorSpec, onChange: (ColorSpec) -> Unit) {
 fun ColorRow(label: String, color: Int, onChange: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().clickable { open = true }.padding(horizontal = 20.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable { open = true }.padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -335,10 +449,7 @@ fun ColorPickerDialog(initial: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit
 private fun PickerSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(84.dp))
-        Slider(
-            value = value, onValueChange = onChange, valueRange = range,
-            colors = SliderDefaults.colors(thumbColor = Nothing.White, activeTrackColor = Nothing.Red, inactiveTrackColor = Nothing.Line),
-        )
+        EqvSlider(value, range, onChange, Modifier.weight(1f))
     }
 }
 

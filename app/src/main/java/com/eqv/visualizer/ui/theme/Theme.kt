@@ -16,8 +16,8 @@ import com.eqv.visualizer.R
 
 object Nothing {
     val Black = Color(0xFF000000)
-    val Surface = Color(0xFF121212)
-    val SurfaceHigh = Color(0xFF1E1E1E)
+    val Surface = Color(0xFF151515)
+    val SurfaceHigh = Color(0xFF242424)
     /** Borders and dividers: visible on black without shouting. */
     val Line = Color(0xFF3A3A3A)
     val White = Color(0xFFFFFFFF)

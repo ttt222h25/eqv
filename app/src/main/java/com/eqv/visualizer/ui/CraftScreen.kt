@@ -164,7 +164,7 @@ private fun StepHeader(step: Int, count: Int, title: String) {
 private fun StartStep(s: AppSettings, onPick: (Look) -> Unit) {
     val look = s.look
     Hint("Pick a starting point. You'll change everything in the next steps.")
-    Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Blank", look == Craft.blank) { onPick(Craft.blank) }
     }
     val groups = buildList {
@@ -174,7 +174,7 @@ private fun StartStep(s: AppSettings, onPick: (Look) -> Unit) {
     for ((group, list) in groups) {
         SectionTitle(group)
         FlowRow(
-            Modifier.padding(horizontal = 20.dp),
+            Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -189,48 +189,58 @@ private fun StartStep(s: AppSettings, onPick: (Look) -> Unit) {
 private fun LayersStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     Hint("Turn on the parts you want and pick their shape. Combine as many as you like.")
     val e = look.edge
-    SwitchRow("Edge glow", e.enabled, "Light around the screen edge") { v -> edit { it.copy(edge = it.edge.copy(enabled = v)) } }
-    if (e.enabled) {
-        ChoiceRow(null, EdgeStyle.entries, e.style, {
-            when (it) {
-                EdgeStyle.FULL -> "Full"
-                EdgeStyle.RUNNING -> "Running"
-                EdgeStyle.SPLIT -> "Level meter"
-                EdgeStyle.BASS_CORNERS -> "Corners"
-            }
-        }) { v -> edit { it.copy(edge = it.edge.copy(style = v)) } }
-        SliderRow("Thickness", e.thicknessDp, 0.5f..12f, { "%.1f dp".format(it) }) { v -> edit { it.copy(edge = it.edge.copy(thicknessDp = v)) } }
+    Group {
+        SwitchRow("Edge glow", e.enabled, "Light around the screen edge") { v -> edit { it.copy(edge = it.edge.copy(enabled = v)) } }
+        if (e.enabled) {
+            ChoiceRow(null, EdgeStyle.entries, e.style, {
+                when (it) {
+                    EdgeStyle.FULL -> "Full"
+                    EdgeStyle.RUNNING -> "Running"
+                    EdgeStyle.SPLIT -> "Level meter"
+                    EdgeStyle.BASS_CORNERS -> "Corners"
+                }
+            }) { v -> edit { it.copy(edge = it.edge.copy(style = v)) } }
+            SliderRow("Thickness", e.thicknessDp, 0.5f..12f, { "%.1f dp".format(it) }) { v -> edit { it.copy(edge = it.edge.copy(thicknessDp = v)) } }
+        }
     }
     val b = look.bars
-    SwitchRow("EQ bars", b.enabled, "Classic equalizer bars") { v -> edit { it.copy(bars = it.bars.copy(enabled = v)) } }
-    if (b.enabled) {
-        ChoiceRow(null, BarsPosition.entries, b.position, {
-            when (it) {
-                BarsPosition.BOTTOM -> "Bottom"
-                BarsPosition.TOP -> "Top"
-                BarsPosition.TOP_AND_BOTTOM -> "Top + bottom"
-                BarsPosition.SIDES -> "Sides"
-            }
-        }) { v -> edit { it.copy(bars = it.bars.copy(position = v)) } }
-        ChoiceRow(null, BarsStyle.entries, b.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(bars = it.bars.copy(style = v)) } }
-        SliderRow("Height", b.height, 0.02f..0.4f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(bars = it.bars.copy(height = v)) } }
-        SwitchRow("Mirror", b.mirror, "Bass in the middle") { v -> edit { it.copy(bars = it.bars.copy(mirror = v)) } }
+    Group {
+        SwitchRow("EQ bars", b.enabled, "Classic equalizer bars") { v -> edit { it.copy(bars = it.bars.copy(enabled = v)) } }
+        if (b.enabled) {
+            ChoiceRow(null, BarsPosition.entries, b.position, {
+                when (it) {
+                    BarsPosition.BOTTOM -> "Bottom"
+                    BarsPosition.TOP -> "Top"
+                    BarsPosition.TOP_AND_BOTTOM -> "Top + bottom"
+                    BarsPosition.SIDES -> "Sides"
+                }
+            }) { v -> edit { it.copy(bars = it.bars.copy(position = v)) } }
+            ChoiceRow(null, BarsStyle.entries, b.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(bars = it.bars.copy(style = v)) } }
+            SliderRow("Height", b.height, 0.02f..0.4f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(bars = it.bars.copy(height = v)) } }
+            SwitchRow("Mirror", b.mirror, "Bass in the middle") { v -> edit { it.copy(bars = it.bars.copy(mirror = v)) } }
+        }
     }
     val r = look.radial
-    SwitchRow("Radial ring", r.enabled, "Circle of bars in the middle") { v -> edit { it.copy(radial = it.radial.copy(enabled = v)) } }
-    if (r.enabled) {
-        ChoiceRow(null, RadialStyle.entries, r.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(radial = it.radial.copy(style = v)) } }
-        SliderRow("Size", r.radius, 0.05f..0.45f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(radius = v)) } }
+    Group {
+        SwitchRow("Radial ring", r.enabled, "Circle of bars in the middle") { v -> edit { it.copy(radial = it.radial.copy(enabled = v)) } }
+        if (r.enabled) {
+            ChoiceRow(null, RadialStyle.entries, r.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(radial = it.radial.copy(style = v)) } }
+            SliderRow("Size", r.radius, 0.05f..0.45f, { "${(it * 100).roundToInt()}%" }) { v -> edit { it.copy(radial = it.radial.copy(radius = v)) } }
+        }
     }
     val w = look.wave
-    SwitchRow("Wave", w.enabled, "A flowing line") { v -> edit { it.copy(wave = it.wave.copy(enabled = v)) } }
-    if (w.enabled) {
-        ChoiceRow(null, WaveStyle.entries, w.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(wave = it.wave.copy(style = v)) } }
-        SliderRow("Position", w.positionY, 0.1f..0.98f, { "${(it * 100).roundToInt()}% down" }) { v -> edit { it.copy(wave = it.wave.copy(positionY = v)) } }
+    Group {
+        SwitchRow("Wave", w.enabled, "A flowing line") { v -> edit { it.copy(wave = it.wave.copy(enabled = v)) } }
+        if (w.enabled) {
+            ChoiceRow(null, WaveStyle.entries, w.style, { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }) { v -> edit { it.copy(wave = it.wave.copy(style = v)) } }
+            SliderRow("Position", w.positionY, 0.1f..0.98f, { "${(it * 100).roundToInt()}% down" }) { v -> edit { it.copy(wave = it.wave.copy(positionY = v)) } }
+        }
     }
     val p = look.pulse
-    SwitchRow("Beat ring", p.enabled && p.style == PulseStyle.RING, "A ring that expands on each beat") { v ->
-        edit { it.copy(pulse = it.pulse.copy(enabled = v, style = PulseStyle.RING)) }
+    Group {
+        SwitchRow("Beat ring", p.enabled && p.style == PulseStyle.RING, "A ring that expands on each beat") { v ->
+            edit { it.copy(pulse = it.pulse.copy(enabled = v, style = PulseStyle.RING)) }
+        }
     }
 }
 
@@ -242,7 +252,7 @@ private fun ColorStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     Hint("One tap colors every layer. Fine-tune each layer below if you want.")
     val active = Craft.paletteOf(look)
     FlowRow(
-        Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -257,13 +267,14 @@ private fun ColorStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     if (layers.isEmpty()) return
     var tab by rememberSaveable { mutableStateOf(layers.first()) }
     if (tab !in layers) tab = layers.first()
-    SectionTitle("Fine-tune")
-    ChoiceRow(null, layers, tab, { it }) { tab = it }
-    when (tab) {
-        "Edge" -> ColorSpecEditor(look.edge.color) { c -> edit { it.copy(edge = it.edge.copy(color = c)) } }
-        "Bars" -> ColorSpecEditor(look.bars.color) { c -> edit { it.copy(bars = it.bars.copy(color = c)) } }
-        "Radial" -> ColorSpecEditor(look.radial.color) { c -> edit { it.copy(radial = it.radial.copy(color = c)) } }
-        "Wave" -> ColorSpecEditor(look.wave.color) { c -> edit { it.copy(wave = it.wave.copy(color = c)) } }
+    Group("Fine-tune") {
+        ChoiceRow(null, layers, tab, { it }) { tab = it }
+        when (tab) {
+            "Edge" -> ColorSpecEditor(look.edge.color) { c -> edit { it.copy(edge = it.edge.copy(color = c)) } }
+            "Bars" -> ColorSpecEditor(look.bars.color) { c -> edit { it.copy(bars = it.bars.copy(color = c)) } }
+            "Radial" -> ColorSpecEditor(look.radial.color) { c -> edit { it.copy(radial = it.radial.copy(color = c)) } }
+            "Wave" -> ColorSpecEditor(look.wave.color) { c -> edit { it.copy(wave = it.wave.copy(color = c)) } }
+        }
     }
 }
 
@@ -300,22 +311,24 @@ private fun MotionStep(look: Look, edit: ((Look) -> Look) -> Unit) {
     Hint("How the bars move: how fast they jump up (rise), how slowly they fall, and which part of the sound they show.")
     val feel = Craft.feelOf(m)
     FlowRow(
-        Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (f in Craft.feels) Chip(f.name, f == feel) { edit { Craft.applyFeel(it, f) } }
     }
-    SectionTitle("Timing")
-    SliderRow("Rise", m.attackMs, 1f..200f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(attackMs = v)) } }
-    SliderRow("Fall", m.decayMs, 30f..1500f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(decayMs = v)) } }
-    SliderRow("Peak hold", m.peakHoldMs, 0f..2000f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(peakHoldMs = v)) } }
-    SliderRow("Sensitivity", m.sensitivity, 0.2f..3f, { "×%.2f".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(sensitivity = v)) } }
-    SectionTitle("Range")
-    IntSliderRow("Bars / bands", m.bandCount, Limits.MIN_BANDS..Limits.MAX_BANDS) { v -> edit { it.copy(motion = it.motion.copy(bandCount = v)) } }
-    SliderRow("Lowest note", m.minHz, 20f..500f, { "%.0f Hz".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(minHz = v)) } }
-    SliderRow("Highest note", m.maxHz, 2000f..20000f, { "%.1f kHz".format(it / 1000f) }) { v -> edit { it.copy(motion = it.motion.copy(maxHz = v)) } }
-    SliderRow("Bass boost", m.bassWeight, 0f..3f, { "×%.2f".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(bassWeight = v)) } }
+    Group("Timing") {
+        SliderRow("Rise", m.attackMs, 1f..200f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(attackMs = v)) } }
+        SliderRow("Fall", m.decayMs, 30f..1500f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(decayMs = v)) } }
+        SliderRow("Peak hold", m.peakHoldMs, 0f..2000f, { "${it.roundToInt()} ms" }) { v -> edit { it.copy(motion = it.motion.copy(peakHoldMs = v)) } }
+        SliderRow("Sensitivity", m.sensitivity, 0.2f..3f, { "×%.2f".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(sensitivity = v)) } }
+    }
+    Group("Range") {
+        IntSliderRow("Bars / bands", m.bandCount, Limits.MIN_BANDS..Limits.MAX_BANDS) { v -> edit { it.copy(motion = it.motion.copy(bandCount = v)) } }
+        SliderRow("Lowest note", m.minHz, 20f..500f, { "%.0f Hz".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(minHz = v)) } }
+        SliderRow("Highest note", m.maxHz, 2000f..20000f, { "%.1f kHz".format(it / 1000f) }) { v -> edit { it.copy(motion = it.motion.copy(maxHz = v)) } }
+        SliderRow("Bass boost", m.bassWeight, 0f..3f, { "×%.2f".format(it) }) { v -> edit { it.copy(motion = it.motion.copy(bassWeight = v)) } }
+    }
 }
 
 // ------------------------------------------------------------------ 5. filter
@@ -325,7 +338,7 @@ private fun MotionStep(look: Look, edit: ((Look) -> Look) -> Unit) {
 private fun FilterStep(f: FilterLayer, onChange: (FilterLayer) -> Unit) {
     Hint("Optional: a screen filter over everything, like an old TV or film.")
     FlowRow(
-        Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -336,23 +349,14 @@ private fun FilterStep(f: FilterLayer, onChange: (FilterLayer) -> Unit) {
         }
     }
     if (!f.enabled) return
-    SliderRow("Strength", f.amount, 0f..1f, { "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(amount = v)) }
-    SliderRow("Follow the music", f.react, 0f..1f, { if (it < 0.02f) "static" else "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(react = v)) }
-    SliderRow("Punch on hits", f.punch, 0f..1f, { if (it < 0.02f) "off" else "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(punch = v)) }
-    SwitchRow("Wash color from album art", f.tintFromAlbum) { v -> onChange(f.copy(tintFromAlbum = v)) }
-    ChoiceRow("On the beat", BeatFx.entries, f.beatFx, ::beatFxName) { v -> onChange(f.copy(beatFx = v)) }
+    Group {
+        SliderRow("Strength", f.amount, 0f..1f, { "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(amount = v)) }
+        SliderRow("Follow the music", f.react, 0f..1f, { if (it < 0.02f) "static" else "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(react = v)) }
+        SliderRow("Punch on hits", f.punch, 0f..1f, { if (it < 0.02f) "off" else "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(punch = v)) }
+        SwitchRow("Wash color from album art", f.tintFromAlbum) { v -> onChange(f.copy(tintFromAlbum = v)) }
+        ChoiceRow("On the beat", BeatFx.entries, f.beatFx, ::beatFxName) { v -> onChange(f.copy(beatFx = v)) }
+    }
     Hint("More filter controls (scanlines, grain, tint…) are in Filter on the home screen.")
-}
-
-private fun filterLabel(st: FilterStyle) = when (st) {
-    FilterStyle.CRT -> "CRT"
-    FilterStyle.VHS -> "VHS"
-    FilterStyle.FILM -> "Film"
-    FilterStyle.NIGHT_VISION -> "Night vision"
-    FilterStyle.POCKET_LCD -> "Pocket LCD"
-    FilterStyle.DOT_MATRIX -> "Dot matrix"
-    FilterStyle.GLITCH -> "Glitch"
-    FilterStyle.CUSTOM -> "Custom"
 }
 
 // ------------------------------------------------------------------ 6. name & save
@@ -372,7 +376,7 @@ private fun SaveStep(look: Look, name: String, onName: (String) -> Unit) {
             unfocusedLabelColor = Nothing.Grey,
             cursorColor = Nothing.Red,
         ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     )
     SectionTitle("Your preset")
     Card {

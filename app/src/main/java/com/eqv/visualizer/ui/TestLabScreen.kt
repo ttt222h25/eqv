@@ -23,8 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -122,75 +120,67 @@ fun TestLabScreen() {
         }
 
         // ---- your music
-        SectionTitle("Your music")
         val song = input as? TestInput.Song
-        Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PrimaryButton(if (song == null) "Pick a song" else "Other song") { picker.launch(arrayOf("audio/*")) }
-            if (input != null) GhostButton(if (paused) "▶ Play" else "❚❚ Pause") { RuntimeState.testPaused.value = !paused }
-            if (input != null) GhostButton("Stop") {
-                RuntimeState.testInput.value = null
-                RuntimeState.testPaused.value = false
+        Group("Your music") {
+            Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PrimaryButton(if (song == null) "Pick a song" else "Other song") { picker.launch(arrayOf("audio/*")) }
+                if (input != null) GhostButton(if (paused) "▶ Play" else "❚❚ Pause") { RuntimeState.testPaused.value = !paused }
+                if (input != null) GhostButton("Stop") {
+                    RuntimeState.testInput.value = null
+                    RuntimeState.testPaused.value = false
+                }
             }
-        }
-        if (song != null) {
-            Text(song.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
-            SeekBar(playback)
-        }
-        playback.error?.let { Hint("⚠ $it") }
-        Hint("Plays a song from your phone and analyzes exactly what you hear, perfectly in sync. Other music pauses while you test.")
-        Row(
-            Modifier.fillMaxWidth().clickable {
+            if (song != null) {
+                Text(song.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp))
+                SeekBar(playback)
+            }
+            playback.error?.let { Hint("⚠ $it") }
+            if (song == null) Hint("Plays a song saved on this phone, in perfect sync. Other music pauses.")
+            ChoiceLine("What's playing on the phone", "Spotify, YouTube… via ${engine.active.label.lowercase()}", input == null) {
                 RuntimeState.testInput.value = null
                 RuntimeState.testPaused.value = false
-            }.padding(horizontal = 20.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Dot(input == null)
-            Column(Modifier.weight(1f)) {
-                Text("What's playing on the phone", style = MaterialTheme.typography.bodyLarge)
-                Text("Spotify, YouTube… via ${engine.active.label.lowercase()}", style = MaterialTheme.typography.bodySmall)
             }
         }
 
         // ---- test sounds
-        SectionTitle("Test sounds")
-        Hint("Each sound isolates one thing, so you can see exactly what reacts to what.")
-        for (sig in TestSignal.entries) {
-            val selected = (input as? TestInput.Signal)?.signal == sig
-            Row(
-                Modifier.fillMaxWidth().clickable {
+        Group("Test sounds") {
+            for (sig in TestSignal.entries) {
+                ChoiceLine(sig.label, sig.hint, (input as? TestInput.Signal)?.signal == sig) {
                     RuntimeState.testPaused.value = false
                     RuntimeState.testInput.value = TestInput.Signal(sig)
-                }.padding(horizontal = 20.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Dot(selected)
-                Column(Modifier.weight(1f)) {
-                    Text(sig.label, style = MaterialTheme.typography.bodyLarge)
-                    Text(sig.hint, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
         // ---- real screen
-        SectionTitle("On the real screen")
-        SwitchRow("Show over other apps", onScreen, "Keeps the test playing; go to your home screen or any app to see it for real") { on ->
-            if (on) {
-                if (!perms.overlay) return@SwitchRow
-                RuntimeState.testOverlay.value = true
-                if (!s.enabled) VisualizerService.start(ctx)
-            } else {
-                RuntimeState.testOverlay.value = false
+        Group("On the real screen") {
+            SwitchRow("Show over other apps", onScreen, if (perms.overlay) "Keeps playing: open any app to see it for real" else "Needs \"Display over other apps\" (Setup)") { on ->
+                if (on) {
+                    if (!perms.overlay) return@SwitchRow
+                    RuntimeState.testOverlay.value = true
+                    if (!s.enabled) VisualizerService.start(ctx)
+                } else {
+                    RuntimeState.testOverlay.value = false
+                }
             }
         }
-        if (!perms.overlay) Hint("Needs \"Display over other apps\" (Setup).")
         Spacer(Modifier.height(32.dp))
     }
 }
 
+/** A selectable line: red dot when it's the one playing. */
 @Composable
-private fun Dot(on: Boolean) {
-    Box(Modifier.padding(end = 14.dp).size(10.dp).clip(CircleShape).background(if (on) Nothing.Red else Nothing.Line))
+private fun ChoiceLine(title: String, sub: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.padding(end = 14.dp).size(10.dp).clip(CircleShape).background(if (selected) Nothing.Red else Nothing.Line))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(sub, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 @Composable
@@ -199,21 +189,21 @@ private fun SeekBar(p: TestPlayback) {
     var dragValue by remember { mutableFloatStateOf(0f) }
     val dur = p.durationMs.coerceAtLeast(1L).toFloat()
     val value = if (dragging) dragValue else (p.positionMs / dur).coerceIn(0f, 1f)
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Slider(
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+        EqvSlider(
             value = value,
-            onValueChange = {
+            range = 0f..1f,
+            onChange = {
                 dragging = true
                 dragValue = it
             },
-            onValueChangeFinished = {
+            onChangeFinished = {
                 RuntimeState.testSeekMs = (dragValue * dur).toLong()
                 dragging = false
             },
             enabled = p.durationMs > 0,
-            colors = SliderDefaults.colors(thumbColor = Nothing.White, activeTrackColor = Nothing.Red, inactiveTrackColor = Nothing.Line),
         )
-        Row {
+        Row(Modifier.padding(horizontal = 10.dp)) {
             Text(mmss((value * dur).toLong()), style = MaterialTheme.typography.labelMedium, color = Nothing.Grey)
             Spacer(Modifier.weight(1f))
             Text(if (p.durationMs > 0) mmss(p.durationMs) else "--:--", style = MaterialTheme.typography.labelMedium, color = Nothing.Grey)

@@ -134,7 +134,8 @@ data class BarsLayer(
     val cornerRadiusDp: Float = 6f,
     /** Mirror the spectrum around the center (bass in the middle). */
     val mirror: Boolean = false,
-    val peakHold: Boolean = true,
+    /** Little caps that hang at recent peaks (retro EQ look). */
+    val peakHold: Boolean = false,
     /** Distance from the screen edge in dp. */
     val marginDp: Float = 0f,
 )

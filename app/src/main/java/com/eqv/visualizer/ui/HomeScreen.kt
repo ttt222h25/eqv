@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -47,11 +48,11 @@ import com.eqv.visualizer.ServiceMode
 import com.eqv.visualizer.media.MediaMonitor
 import com.eqv.visualizer.media.NowPlayingListener
 import com.eqv.visualizer.service.DeviceSignals
-import com.eqv.visualizer.service.ProjectionActivity
 import com.eqv.visualizer.service.VisualizerService
 import com.eqv.visualizer.settings.AppSettings
 import com.eqv.visualizer.settings.AudioSourceMode
 import com.eqv.visualizer.settings.BuiltInPresets
+import com.eqv.visualizer.settings.FilterStyle
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.SettingsRepository
 import com.eqv.visualizer.ui.theme.Nothing
@@ -96,77 +97,54 @@ fun HomeScreen(go: (Screen) -> Unit) {
     val repo = remember { SettingsRepository.get(ctx) }
     val s by repo.state.collectAsStateWithLifecycle()
     val service by RuntimeState.service.collectAsStateWithLifecycle()
-    val engine by RuntimeState.engine.collectAsStateWithLifecycle()
     val media by MediaMonitor.state.collectAsStateWithLifecycle()
-    val test by RuntimeState.testOverlay.collectAsStateWithLifecycle()
     val perms = rememberPerms()
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (!perms.essentialsOk || !perms.listener) {
             Card {
-                Column(Modifier.padding(20.dp)) {
-                    Text("FINISH SETUP", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
-                    Spacer(Modifier.height(6.dp))
+                Column(Modifier.padding(18.dp)) {
+                    Text("Finish setup", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         when {
-                            !perms.overlay -> "Allow drawing over other apps so visuals can appear everywhere."
-                            !perms.mic -> "Allow microphone access: Android requires it for the system audio visualizer."
-                            else -> "Allow notification access so EQV can start with your music and use album colors."
+                            !perms.overlay -> "Allow drawing over other apps so the visuals can appear everywhere."
+                            !perms.mic -> "Allow the microphone: Android needs it for the system audio visualizer."
+                            else -> "Allow notification access so EQV starts with your music."
                         },
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(14.dp))
                     PrimaryButton("Open setup") { go(Screen.PERMISSIONS) }
                 }
             }
         }
 
-        // ---- master switch + status
-        Card {
-            Column(Modifier.padding(vertical = 8.dp)) {
-                SwitchRow(
-                    "Visualizer",
-                    s.enabled,
-                    sub = statusLine(service.mode, service.pausedReason, s.behavior.autoStart),
-                ) { on ->
-                    if (on) {
-                        if (!perms.overlay) go(Screen.PERMISSIONS) else VisualizerService.start(ctx)
-                    } else {
-                        RuntimeState.stopTests()
-                        VisualizerService.stop(ctx)
-                    }
+        // ---- master switch + what's playing
+        Group {
+            SwitchRow("Visualizer", s.enabled, statusLine(service.mode, service.pausedReason, s.behavior.autoStart)) { on ->
+                if (on) {
+                    if (!perms.overlay) go(Screen.PERMISSIONS) else VisualizerService.start(ctx)
+                } else {
+                    RuntimeState.stopTests()
+                    VisualizerService.stop(ctx)
                 }
-                val top = media.top
+            }
+            val top = media.top
+            if (top != null) {
                 Text(
-                    buildString {
-                        append("SOURCE  ").append(engine.active.label.uppercase())
-                        if (top != null) {
-                            append("\nNOW     ")
-                            append(listOfNotNull(top.title, top.artist).joinToString(" — ").ifBlank { top.packageName })
-                            append(if (top.playing) "  ▶" else "  ❚❚")
-                        }
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Nothing.Grey,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    (if (top.playing) "▶  " else "❚❚  ") +
+                        listOfNotNull(top.title, top.artist).joinToString(" — ").ifBlank { top.packageName },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 18.dp, end = 18.dp, bottom = 12.dp),
                 )
-                engine.message?.let { Hint(it) }
-                if (service.needsAudioResume) {
-                    Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                        PrimaryButton("Resume audio") { VisualizerService.start(ctx) }
-                    }
-                    Hint("Android restarted EQV in the background without microphone access. One tap restores it.")
-                }
-                NavRow("Test lab", "Test with your own songs or test sounds, big preview, live meters") { go(Screen.LAB) }
-                SwitchRow("Test overlay with demo", test, sub = "Shows the overlay now with the synthetic beat, over any app") { on ->
-                    if (on) {
-                        RuntimeState.testOverlay.value = true
-                        RuntimeState.demoOverride.value = true
-                    } else {
-                        RuntimeState.stopTests()
-                    }
-                    if (on && perms.overlay && !s.enabled) VisualizerService.start(ctx)
-                    if (on && !perms.overlay) go(Screen.PERMISSIONS)
+            }
+            if (service.needsAudioResume) {
+                Hint("Android restarted EQV without microphone access. One tap brings the sound back.")
+                Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
+                    PrimaryButton("Resume audio") { VisualizerService.start(ctx) }
                 }
             }
         }
@@ -174,58 +152,60 @@ fun HomeScreen(go: (Screen) -> Unit) {
         // ---- presets
         SectionTitle("Preset" + if (PresetOps.isEdited(s, s.activePresetId)) " · edited" else "")
         PresetPicker(s) { id -> repo.update { PresetOps.apply(it, id) } }
-        Row(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-            PrimaryButton("+ Create preset") { go(Screen.CRAFT) }
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrimaryButton("+ Create") { go(Screen.CRAFT) }
+            GhostButton("All presets") { go(Screen.PRESETS) }
         }
 
-        // ---- HQ capture
-        SectionTitle("Audio")
-        Card {
-            Column(Modifier.padding(vertical = 8.dp)) {
-                ChoiceRow(
-                    "Source",
-                    AudioSourceMode.entries,
-                    s.behavior.audioSource,
-                    { sourceName(it) },
-                ) { m ->
-                    if (m == AudioSourceMode.PLAYBACK_CAPTURE) {
-                        ctx.startActivity(Intent(ctx, ProjectionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } else {
-                        repo.update { it.copy(behavior = it.behavior.copy(audioSource = m)) }
-                    }
-                }
-                Hint(sourceHint(s.behavior.audioSource))
-                if (engine.failures.isNotEmpty()) {
-                    for ((k, v) in engine.failures) Hint("✕ ${k.label}: $v")
-                }
-            }
+        Group("Customize") {
+            NavRow("Visuals", value = layersSummary(s)) { go(Screen.LAYERS) }
+            NavRow("Filter", value = if (s.look.filter.enabled) filterLabel(s.look.filter.style) else "Off") { go(Screen.FILTER) }
+            NavRow("Motion") { go(Screen.MOTION) }
+            NavRow("Beat") { go(Screen.BEAT) }
         }
 
-        // ---- navigation
-        SectionTitle("Settings")
-        Card {
-            Column {
-                NavRow("Visuals", "Edge glow, bars, radial, wave, beat pulse") { go(Screen.LAYERS) }
-                NavRow("Filter", "CRT, VHS, film, night vision, LCD, glitch") { go(Screen.FILTER) }
-                NavRow("Motion", "Sensitivity, smoothing, bands, frequency range") { go(Screen.MOTION) }
-                NavRow("Beat", "Detection sensitivity, cooldown, ripple") { go(Screen.BEAT) }
-                NavRow("Haptics", "Vibrate on strong kicks (off by default, all presets)") { go(Screen.HAPTICS) }
-                NavRow("Shake", "Classic overlay shake (off in all presets)") { go(Screen.THUMP) }
-                NavRow("Behavior", "Auto-start, app filters, pauses, A/V sync") { go(Screen.BEHAVIOR) }
-                NavRow("Performance", "FPS cap, quality, opacity, FPS counter") { go(Screen.PERFORMANCE) }
-                NavRow("Presets", "Save, rename, duplicate, import/export") { go(Screen.PRESETS) }
-                if (s.debug.showPanel) NavRow("Debug", "Live FFT, beats, source, frame stats") { go(Screen.DEBUG) }
-                NavRow("Setup", "Permissions and system access") { go(Screen.PERMISSIONS) }
-            }
+        Group("Try it") {
+            NavRow("Test lab", "Your songs or test sounds, big preview, live meters") { go(Screen.LAB) }
         }
-        Spacer(Modifier.height(16.dp))
+
+        Group("More") {
+            NavRow("Audio source", value = sourceName(s.behavior.audioSource)) { go(Screen.AUDIO) }
+            NavRow("Behavior", "Auto-start, hiding, pauses, sync") { go(Screen.BEHAVIOR) }
+            NavRow("Haptics", value = if (s.haptics.enabled) "On" else "Off") { go(Screen.HAPTICS) }
+            NavRow("Shake", value = if (s.look.thump.enabled) "On" else "Off") { go(Screen.THUMP) }
+            NavRow("Performance") { go(Screen.PERFORMANCE) }
+            NavRow("Setup", value = if (perms.essentialsOk && perms.listener) "Done" else "To do") { go(Screen.PERMISSIONS) }
+            if (s.debug.showPanel) NavRow("Debug") { go(Screen.DEBUG) }
+        }
         Text(
             "EQV ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
             color = Nothing.DimGrey,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
         )
     }
+}
+
+private fun layersSummary(s: AppSettings): String {
+    val l = s.look
+    return listOfNotNull(
+        "Edge".takeIf { l.edge.enabled },
+        "Bars".takeIf { l.bars.enabled },
+        "Ring".takeIf { l.radial.enabled },
+        "Wave".takeIf { l.wave.enabled },
+        "Pulse".takeIf { l.pulse.enabled },
+    ).joinToString(" · ").ifEmpty { "None" }
+}
+
+fun filterLabel(st: FilterStyle) = when (st) {
+    FilterStyle.CRT -> "CRT"
+    FilterStyle.VHS -> "VHS"
+    FilterStyle.FILM -> "Film"
+    FilterStyle.NIGHT_VISION -> "Night vision"
+    FilterStyle.POCKET_LCD -> "Pocket LCD"
+    FilterStyle.DOT_MATRIX -> "Dot matrix"
+    FilterStyle.GLITCH -> "Glitch"
+    FilterStyle.CUSTOM -> "Custom"
 }
 
 fun statusLine(mode: ServiceMode, reason: String?, autoStart: Boolean): String = when (mode) {
@@ -271,48 +251,50 @@ fun PermissionsScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Hint("EQV needs a few system permissions. Each one says why; nothing leaves your phone.")
-        PermRow("1 · Display over other apps", "Draws the visuals on top of every app. Click-through: never blocks touches.", perms.overlay) {
-            open(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")))
-        }
-        PermRow("2 · Microphone", "Android requires it for the system audio visualizer (it does not record you). Also used by the Mic source.", perms.mic) {
-            launcher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
-        }
-        PermRow("3 · Notifications", "Shows the on/off + preset switch notification.", perms.notifications) {
-            launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-        }
-        PermRow("4 · Notification access", "Sees what's playing: auto-start/stop with your music, app filter, album colors.", perms.listener) {
-            val component = ComponentName(ctx, NowPlayingListener::class.java).flattenToString()
-            open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component))
+        Hint("Each permission says why it's needed. Nothing leaves your phone.")
+        Group("Needed") {
+            PermRow("Display over other apps", "Draws the visuals on top of every app. Touches pass through.", perms.overlay) {
+                open(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")))
+            }
+            PermRow("Microphone", "Android requires it for the system audio visualizer. EQV never records you.", perms.mic) {
+                launcher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+            }
+            PermRow("Notifications", "The on/off and preset switch in the notification.", perms.notifications) {
+                launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            }
+            PermRow("Notification access", "Sees what's playing: starts with your music, album colors.", perms.listener) {
+                val component = ComponentName(ctx, NowPlayingListener::class.java).flattenToString()
+                open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component))
+            }
         }
         if (!perms.overlay || !perms.listener) {
-            Card {
-                Column(Modifier.padding(16.dp)) {
-                    Text("\"APP WAS DENIED ACCESS\" / \"RESTRICTED SETTING\"?", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Android 15+ locks \"Display over other apps\" and notification access for apps installed from a browser. Unlock once:\n" +
-                            "1. Try the permission once (Android refuses).\n" +
-                            "2. App info → ⋮ (top right) → Allow restricted settings → confirm with fingerprint/PIN.\n" +
-                            "3. Come back and tap Allow again.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(Modifier.height(10.dp))
+            Group("Android says \"restricted setting\"?") {
+                Text(
+                    "Apps installed from a browser need one extra step:\n" +
+                        "1. Tap Allow once (Android refuses).\n" +
+                        "2. App info → ⋮ top right → Allow restricted settings.\n" +
+                        "3. Come back and tap Allow again.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                )
+                Row(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
                     GhostButton("Open app info") {
                         open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
                     }
                 }
             }
         }
-        SectionTitle("Optional")
-        PermRow("Usage access", "Only for \"Hide in these apps\": lets EQV see which app is in front.", perms.usage) {
-            open(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        Group("Optional") {
+            PermRow("Usage access", "Only for hiding EQV in chosen apps.", perms.usage) {
+                open(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }
+            PermRow("Battery: unrestricted", "Keeps auto-start instant. Nothing OS can be strict.", perms.batteryUnrestricted) {
+                open(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
         }
-        PermRow("Battery: unrestricted", "Keeps the armed service alive so auto-start is instant. Nothing OS can be aggressive.", perms.batteryUnrestricted) {
-            open(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        Group("Quick Settings tiles") {
+            Hint("Pull down Quick Settings → pencil → drag in \"EQV\" and \"EQV preset\".")
         }
-        SectionTitle("Quick Settings")
-        Hint("Pull down Quick Settings → edit (pencil) → drag the \"EQV\" and \"EQV preset\" tiles in.")
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -320,15 +302,15 @@ fun PermissionsScreen() {
 @Composable
 private fun PermRow(title: String, why: String, granted: Boolean, onGrant: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(why, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.width(12.dp))
-        if (granted) Text("✓", style = MaterialTheme.typography.headlineSmall, color = Nothing.White)
+        if (granted) Text("✓", style = MaterialTheme.typography.titleMedium, color = Nothing.Grey)
         else PrimaryButton("Allow", onClick = onGrant)
     }
 }
@@ -349,7 +331,7 @@ private fun PresetPicker(s: AppSettings, onApply: (String) -> Unit) {
     var selected by rememberSaveable { mutableStateOf(activeGroup ?: groups.first().first) }
     val shown = groups.firstOrNull { it.first == selected } ?: groups.first()
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 28.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         for ((name, _) in groups) {
@@ -367,9 +349,9 @@ private fun PresetPicker(s: AppSettings, onApply: (String) -> Unit) {
             }
         }
     }
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(8.dp))
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (p in shown.second) Chip(p.name, p.id == s.activePresetId) { onApply(p.id) }

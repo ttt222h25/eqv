@@ -76,7 +76,7 @@ fun LivePreview(height: Dp = 250.dp) {
     ) {
         PreviewSurface(Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-            Text("LIVE PREVIEW", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
+            Text("LIVE PREVIEW", style = MaterialTheme.typography.labelMedium, color = Nothing.Grey)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (engine.active != com.eqv.visualizer.SourceKind.NONE) Nothing.Red else Nothing.DimGrey))
