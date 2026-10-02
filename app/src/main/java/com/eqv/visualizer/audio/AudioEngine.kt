@@ -8,12 +8,16 @@ import android.os.Process
 import com.eqv.visualizer.EngineStatus
 import com.eqv.visualizer.RuntimeState
 import com.eqv.visualizer.SourceKind
+import com.eqv.visualizer.TestInput
+import com.eqv.visualizer.TestPlayback
 import com.eqv.visualizer.audio.dsp.AnalysisFrame
 import com.eqv.visualizer.audio.dsp.FrameRing
 import com.eqv.visualizer.audio.dsp.SpectrumPipeline
 import com.eqv.visualizer.audio.source.AudioSource
 import com.eqv.visualizer.audio.source.DemoSource
+import com.eqv.visualizer.audio.source.FileSource
 import com.eqv.visualizer.audio.source.RecordSource
+import com.eqv.visualizer.audio.source.SignalSource
 import com.eqv.visualizer.audio.source.VisualizerSource
 import com.eqv.visualizer.settings.AppSettings
 import com.eqv.visualizer.settings.AudioSourceMode
@@ -95,6 +99,9 @@ object AudioEngine {
     private fun effectiveMode(): AudioSourceMode =
         if (RuntimeState.demoOverride.value) AudioSourceMode.DEMO else settings().behavior.audioSource
 
+    /** What the loop is currently serving: a Test lab input, or the configured mode. */
+    private fun effectiveKey(): Any = RuntimeState.testInput.value ?: effectiveMode()
+
     private fun chainFor(mode: AudioSourceMode): List<SourceKind> = when (mode) {
         AudioSourceMode.AUTO -> buildList {
             add(SourceKind.VISUALIZER)
@@ -110,10 +117,15 @@ object AudioEngine {
     private fun micGranted(): Boolean =
         appContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
-    private fun create(kind: SourceKind): AudioSource = when (kind) {
+    private fun create(kind: SourceKind, test: TestInput?): AudioSource = when (kind) {
         SourceKind.VISUALIZER -> VisualizerSource()
         SourceKind.PLAYBACK_CAPTURE -> RecordSource(appContext, kind, projection)
         SourceKind.MIC -> RecordSource(appContext, kind, null)
+        SourceKind.TEST -> when (test) {
+            is TestInput.Song -> FileSource(appContext, test.uri)
+            is TestInput.Signal -> SignalSource(appContext, test.signal)
+            null -> DemoSource()
+        }
         else -> DemoSource()
     }
 
@@ -127,8 +139,11 @@ object AudioEngine {
 
         while (!me.isInterrupted) {
             restartRequested = false
-            val mode = effectiveMode()
-            val full = chainFor(mode)
+            val key = effectiveKey()
+            val test = key as? TestInput
+            // A test input needs no mic and must never trip the silence watchdog (like demo).
+            val mode = if (test != null) AudioSourceMode.DEMO else key as AudioSourceMode
+            val full = if (test != null) listOf(SourceKind.TEST) else chainFor(mode)
             var chain = synchronized(lock) { full.filter { it !in skipped } }
             if (chain.isEmpty()) {
                 synchronized(lock) { skipped.clear() }
@@ -137,11 +152,11 @@ object AudioEngine {
             failures.clear()
             var source: AudioSource? = null
             for (kind in chain) {
-                if (kind != SourceKind.DEMO && !micGranted()) {
+                if (kind != SourceKind.DEMO && kind != SourceKind.TEST && !micGranted()) {
                     failures[kind] = "Microphone permission not granted"
                     continue
                 }
-                val s = create(kind)
+                val s = create(kind, test)
                 val err = s.open()
                 if (err == null) {
                     source = s
@@ -149,6 +164,12 @@ object AudioEngine {
                 }
                 failures[kind] = err
                 s.close()
+            }
+            if (source == null && test != null) {
+                // A song that can't be played won't start working by retrying: report and stop.
+                RuntimeState.testPlayback.value = TestPlayback(error = failures[SourceKind.TEST])
+                RuntimeState.testInput.compareAndSet(test, null)
+                continue
             }
             if (source == null) {
                 publish(SourceKind.NONE, failures, "No audio source available. Retrying…")
@@ -164,7 +185,7 @@ object AudioEngine {
             var silentSince = 0L
             while (!me.isInterrupted && !restartRequested) {
                 val s = settings()
-                if (effectiveMode() != mode) break
+                if (effectiveKey() != key) break
                 val n = source.readWindow(window, s.look.motion.fftSize)
                 if (n < 0) {
                     if (!me.isInterrupted) {
@@ -174,7 +195,8 @@ object AudioEngine {
                     break
                 }
                 val now = System.nanoTime()
-                pipeline.process(window, n, source.sampleRate, now, s.look.motion, s.look.beat, work)
+                // Stamp with the time the sound is heard (sources that play audio run ahead of it).
+                pipeline.process(window, n, source.sampleRate, now + source.latencyNanos, s.look.motion, s.look.beat, work)
                 ring.publish(work)
 
                 // Silence watchdog: a session reports PLAYING but this source hears nothing.

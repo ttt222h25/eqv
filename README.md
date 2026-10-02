@@ -9,6 +9,7 @@ A system-wide, click-through music visualizer that runs on top of any app (Spoti
 - **Smart behavior**: auto start/stop with music, which players trigger it, hide in fullscreen or in chosen apps, pause on screen-off/calls/low battery, album-art colors, Quick Settings tiles (toggle and preset), and a notification with on/off + next preset.
 - **Audio**: Visualizer API → microphone fallback chain (with a silence watchdog), optional HQ playback capture, and a demo signal.
 - **DSP**: Hann-windowed FFT (1024/2048, 50% overlap), log bands (8–64), fast-attack/slow-decay smoothing, peak hold, auto-gain, spectral-flux beats with cooldown, and an A/V sync delay per output route.
+- **Test lab**: play your own songs (any format Android decodes) or audible test sounds (kick, bassline, chords, hi-hats, sweep, build & drop, silence) through the real analyzer, perfectly in sync (frames stamped with the AudioTrack output latency); big preview, live bass/mid/high/level meters and beat light, preset ‹ ›, seek/pause, and "show over other apps".
 - **Create preset**: a step-by-step creator (start from → layers → colors → range & timing → filter → name & save) with the live preview on screen; backing out restores the previous look.
 - **Presets**: 34 built-in presets in occasion groups (Everyday, Filters, Chill, Party, Bass & gym, Night, Focus, Retro & games); edits auto-save into the active preset (built-ins can be reset to original); save as new/rename/duplicate/delete; import/export JSON (file or clipboard).
 

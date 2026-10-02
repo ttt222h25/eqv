@@ -171,6 +171,8 @@ class VisualizerView(context: Context, private val preview: Boolean) : View(cont
     }
 
     private fun syncDelayNanos(s: AppSettings): Long {
+        // Test lab audio is played by us and stamped with its real output latency already.
+        if (RuntimeState.testInput.value != null) return 0L
         val ms = when (RuntimeState.outputRoute) {
             OutputRoute.SPEAKER -> s.behavior.syncSpeakerMs
             OutputRoute.WIRED -> s.behavior.syncWiredMs

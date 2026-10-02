@@ -65,40 +65,16 @@ fun EngineWhileStarted(tag: String) {
  */
 @Composable
 fun LivePreview(height: Dp = 250.dp) {
-    val context = LocalContext.current
-    val repo = remember { SettingsRepository.get(context) }
-    val haptics = remember { BeatHaptics(context) }
     val demo by RuntimeState.demoOverride.collectAsStateWithLifecycle()
     val engine by RuntimeState.engine.collectAsStateWithLifecycle()
     val service by RuntimeState.service.collectAsStateWithLifecycle()
-    val aspect = remember {
-        val b = context.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds
-        b.width().toFloat() / b.height().coerceAtLeast(1)
-    }
     EngineWhileStarted("preview")
 
     Row(
         Modifier.fillMaxWidth().height(height).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Box(Modifier.fillMaxHeight().aspectRatio(aspect)) {
-            AndroidView(
-                factory = { ctx ->
-                    VisualizerView(ctx, preview = true).also { v ->
-                        v.renderer.onBeat = { strength, thumped ->
-                            // Feel the haptics while tuning, unless the overlay is already doing it.
-                            if (RuntimeState.service.value.mode != ServiceMode.ACTIVE) {
-                                val s = repo.state.value
-                                haptics.onBeat(strength, s.haptics, System.nanoTime(), force = thumped && s.look.thump.withHaptic)
-                            }
-                        }
-                        v.start()
-                    }
-                },
-                onRelease = { it.stop() },
-                modifier = Modifier.fillMaxHeight().aspectRatio(aspect),
-            )
-        }
+        PreviewSurface(Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
             Text("LIVE PREVIEW", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
             Spacer(Modifier.height(8.dp))
@@ -119,5 +95,38 @@ fun LivePreview(height: Dp = 250.dp) {
                 Text("Overlay is live too.", style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+}
+
+/**
+ * The exact overlay renderer drawn on a scaled copy of this phone's screen (real rounded
+ * corners + punch-hole). Fills the height of [modifier] at the phone's aspect ratio.
+ */
+@Composable
+fun PreviewSurface(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val repo = remember { SettingsRepository.get(context) }
+    val haptics = remember { BeatHaptics(context) }
+    val aspect = remember {
+        val b = context.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds
+        b.width().toFloat() / b.height().coerceAtLeast(1)
+    }
+    Box(modifier.aspectRatio(aspect)) {
+        AndroidView(
+            factory = { ctx ->
+                VisualizerView(ctx, preview = true).also { v ->
+                    v.renderer.onBeat = { strength, thumped ->
+                        // Feel the haptics while tuning, unless the overlay is already doing it.
+                        if (RuntimeState.service.value.mode != ServiceMode.ACTIVE) {
+                            val s = repo.state.value
+                            haptics.onBeat(strength, s.haptics, System.nanoTime(), force = thumped && s.look.thump.withHaptic)
+                        }
+                    }
+                    v.start()
+                }
+            },
+            onRelease = { it.stop() },
+            modifier = Modifier.fillMaxHeight().aspectRatio(aspect),
+        )
     }
 }

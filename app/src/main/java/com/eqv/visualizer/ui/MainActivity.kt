@@ -38,6 +38,7 @@ enum class Screen(val title: String, val preview: Boolean = true) {
     BEHAVIOR("Behavior", preview = false),
     PERFORMANCE("Performance"),
     PRESETS("Presets"),
+    LAB("Test lab", preview = false),
     CRAFT("Create"),
     DEBUG("Debug", preview = false),
     PERMISSIONS("Setup", preview = false),
@@ -52,8 +53,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        // The demo signal is for tuning in the app; keep it only when testing the overlay.
-        if (!RuntimeState.testOverlay.value) RuntimeState.demoOverride.value = false
+        // Demo and Test lab audio are for tuning in the app; keep them only when testing the
+        // overlay on the real screen.
+        if (!RuntimeState.testOverlay.value) RuntimeState.stopTests()
     }
 }
 
@@ -79,6 +81,7 @@ fun App() {
                 Screen.BEHAVIOR -> BehaviorScreen(go)
                 Screen.PERFORMANCE -> PerformanceScreen()
                 Screen.PRESETS -> PresetsScreen(go)
+                Screen.LAB -> TestLabScreen()
                 Screen.CRAFT -> CraftScreen(onDone = { if (stack.size > 1) stack.removeAt(stack.lastIndex) })
                 Screen.DEBUG -> DebugScreen()
                 Screen.PERMISSIONS -> PermissionsScreen()

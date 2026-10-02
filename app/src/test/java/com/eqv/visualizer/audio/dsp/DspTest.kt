@@ -254,3 +254,69 @@ class FrameRingTest {
         assertEquals(0f, out.level)
     }
 }
+
+class TestSignalsTest {
+    private val sr = 48000
+
+    /** Runs [signal] through the real pipeline; returns (mean spectral centroid in bands 0..1, beats, silent). */
+    private fun analyze(signal: com.eqv.visualizer.TestSignal, seconds: Int = 8): Triple<Float, Int, Boolean> {
+        val gen = TestSignals(sr)
+        val pipeline = SpectrumPipeline()
+        val frame = AnalysisFrame()
+        val windower = StreamWindower(2048)
+        val motion = Motion()
+        val beat = BeatConfig()
+        var samples = 0L
+        var peak = 0f
+        val reader = SampleReader { buf, off, len ->
+            gen.fill(signal, buf, off, len)
+            for (i in off until off + len) peak = maxOf(peak, kotlin.math.abs(buf[i]))
+            samples += len
+            len
+        }
+        var centroidSum = 0.0
+        var centroidN = 0
+        while (samples < sr.toLong() * seconds) {
+            windower.advance(reader)
+            pipeline.process(windower.window, 2048, sr, samples * 1_000_000_000L / sr, motion, beat, frame)
+            var w = 0.0
+            var sum = 0.0
+            for (i in 0 until frame.bandCount) {
+                w += i * frame.bands[i].toDouble()
+                sum += frame.bands[i]
+            }
+            if (sum > 0.5) {
+                centroidSum += w / sum / (frame.bandCount - 1)
+                centroidN++
+            }
+        }
+        assertTrue("$signal clips: $peak", peak <= 1f)
+        val c = if (centroidN == 0) 0f else (centroidSum / centroidN).toFloat()
+        return Triple(c, frame.beatSeq, frame.silent)
+    }
+
+    @Test
+    fun signalsLandWhereTheyClaim() {
+        val bass = analyze(com.eqv.visualizer.TestSignal.BASS).first
+        val mids = analyze(com.eqv.visualizer.TestSignal.MIDS).first
+        val hats = analyze(com.eqv.visualizer.TestSignal.HATS).first
+        assertTrue("bass=$bass mids=$mids hats=$hats", bass < mids && mids < hats)
+        assertTrue("bass=$bass", bass < 0.35f)
+        assertTrue("hats=$hats", hats > 0.6f)
+    }
+
+    @Test
+    fun kickHasBeatsAndSilenceIsSilent() {
+        val (_, beats, _) = analyze(com.eqv.visualizer.TestSignal.KICK)
+        assertTrue("beats=$beats", beats in 12..18) // 120 bpm for 8 s = 16
+        val (_, _, silent) = analyze(com.eqv.visualizer.TestSignal.SILENCE, seconds = 2)
+        assertTrue(silent)
+    }
+
+    @Test
+    fun allSignalsStayInRange() {
+        for (s in com.eqv.visualizer.TestSignal.entries) analyze(s, seconds = 3)
+        // Build & drop includes both halves (32 beats = 16 s).
+        analyze(com.eqv.visualizer.TestSignal.BUILD_DROP, seconds = 17)
+    }
+}

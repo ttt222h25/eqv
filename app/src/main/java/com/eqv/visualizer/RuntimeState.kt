@@ -1,5 +1,6 @@
 package com.eqv.visualizer
 
+import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Which audio source is actually feeding the analyzer. */
@@ -9,7 +10,32 @@ enum class SourceKind(val label: String) {
     PLAYBACK_CAPTURE("Playback capture (HQ)"),
     MIC("Microphone"),
     DEMO("Demo signal"),
+    TEST("Test lab"),
 }
+
+/** Test sounds that each isolate one thing the visuals react to. */
+enum class TestSignal(val label: String, val hint: String) {
+    FULL_MIX("Full mix", "Kick, snare, hats, bass and chords together"),
+    KICK("Kick only", "Beats and bass: beat hits, corners, bass-driven filter parts"),
+    BASS("Bassline", "Low end without drums: bass bars, vignette, scanlines"),
+    MIDS("Chords", "Mids: middle bars, RGB stripes, pixel grid"),
+    HATS("Hi-hats", "Treble: right-hand bars, grain, flicker, tape noise"),
+    SWEEP("Sweep", "One tone gliding from deep bass to high treble: watch it travel across the bars"),
+    BUILD_DROP("Build & drop", "8 s rising build, then a loud drop: tests quiet → loud"),
+    SILENCE("Silence", "Nothing: shows the idle look"),
+}
+
+/** What the Test lab plays and analyzes instead of the live source. */
+sealed interface TestInput {
+    data class Song(val uri: Uri, val name: String) : TestInput
+    data class Signal(val signal: TestSignal) : TestInput
+}
+
+data class TestPlayback(
+    val positionMs: Long = 0,
+    val durationMs: Long = 0,
+    val error: String? = null,
+)
 
 data class EngineStatus(
     val running: Boolean = false,
@@ -50,6 +76,23 @@ object RuntimeState {
 
     /** Use the demo signal regardless of the configured source (preview / test mode). */
     val demoOverride = MutableStateFlow(false)
+
+    /** Test lab input (song or test sound) that overrides every other source; null = off. */
+    val testInput = MutableStateFlow<TestInput?>(null)
+    val testPaused = MutableStateFlow(false)
+    val testPlayback = MutableStateFlow(TestPlayback())
+
+    /** Seek request for the test song in ms, consumed by the audio thread (-1 = none). */
+    @Volatile
+    var testSeekMs: Long = -1
+
+    /** Ends every test mode (overlay test, demo, test lab). */
+    fun stopTests() {
+        testOverlay.value = false
+        demoOverride.value = false
+        testInput.value = null
+        testPaused.value = false
+    }
 
     /** Album palette: 3 ARGB colors or null. Volatile so the render thread reads it lock-free. */
     @Volatile

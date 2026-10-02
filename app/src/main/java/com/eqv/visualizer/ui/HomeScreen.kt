@@ -132,7 +132,7 @@ fun HomeScreen(go: (Screen) -> Unit) {
                     if (on) {
                         if (!perms.overlay) go(Screen.PERMISSIONS) else VisualizerService.start(ctx)
                     } else {
-                        RuntimeState.testOverlay.value = false
+                        RuntimeState.stopTests()
                         VisualizerService.stop(ctx)
                     }
                 }
@@ -157,9 +157,14 @@ fun HomeScreen(go: (Screen) -> Unit) {
                     }
                     Hint("Android restarted EQV in the background without microphone access. One tap restores it.")
                 }
+                NavRow("Test lab", "Test with your own songs or test sounds, big preview, live meters") { go(Screen.LAB) }
                 SwitchRow("Test overlay with demo", test, sub = "Shows the overlay now with the synthetic beat, over any app") { on ->
-                    RuntimeState.testOverlay.value = on
-                    RuntimeState.demoOverride.value = on
+                    if (on) {
+                        RuntimeState.testOverlay.value = true
+                        RuntimeState.demoOverride.value = true
+                    } else {
+                        RuntimeState.stopTests()
+                    }
                     if (on && perms.overlay && !s.enabled) VisualizerService.start(ctx)
                     if (on && !perms.overlay) go(Screen.PERMISSIONS)
                 }

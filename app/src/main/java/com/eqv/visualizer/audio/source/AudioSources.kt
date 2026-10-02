@@ -33,6 +33,9 @@ interface AudioSource {
      */
     fun readWindow(dest: FloatArray, preferredSize: Int): Int
 
+    /** How far the analysis runs ahead of what you hear (sources that play the audio). */
+    val latencyNanos: Long get() = 0L
+
     fun close()
 }
 

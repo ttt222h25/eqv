@@ -28,6 +28,14 @@ object PresetOps {
         return apply(s, all[(idx + 1).mod(all.size)].id)
     }
 
+    fun previous(s: AppSettings): AppSettings {
+        val all = allPresets(s)
+        if (all.isEmpty()) return s
+        val idx = all.indexOfFirst { it.id == s.activePresetId }
+        val target = if (idx < 0) all.lastIndex else (idx - 1).mod(all.size)
+        return apply(s, all[target].id)
+    }
+
     /**
      * Auto-save: writes the current look into the active preset, so tweaks are never lost when
      * switching presets. Built-ins keep the edit in [AppSettings.presetEdits] (resettable);

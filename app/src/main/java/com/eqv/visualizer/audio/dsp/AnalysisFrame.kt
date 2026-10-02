@@ -105,7 +105,9 @@ class FrameRing(capacity: Int = 96) {
     fun read(dst: AnalysisFrame, nowNanos: Long, delayNanos: Long): Boolean {
         synchronized(lock) {
             if (size == 0) return false
-            if (delayNanos <= 0L) {
+            // Fast path: newest frame, unless it is stamped in the future (audio still in the
+            // output buffer of a source that plays it).
+            if (delayNanos <= 0L && frames[head].timestampNanos <= nowNanos + FUTURE_SLACK_NANOS) {
                 dst.copyFrom(frames[head])
                 return true
             }
@@ -131,5 +133,10 @@ class FrameRing(capacity: Int = 96) {
             size = 0
             head = -1
         }
+    }
+
+    companion object {
+        /** Frames published just after a vsync are still "now", not future. */
+        const val FUTURE_SLACK_NANOS = 25_000_000L
     }
 }
