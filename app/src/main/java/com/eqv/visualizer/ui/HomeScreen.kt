@@ -105,7 +105,7 @@ fun HomeScreen(go: (Screen) -> Unit) {
         if (!perms.essentialsOk || !perms.listener) {
             Card {
                 Column(Modifier.padding(20.dp)) {
-                    Text("FINISH SETUP", style = MaterialTheme.typography.labelMedium, color = Nothing.Red)
+                    Text("FINISH SETUP", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         when {
@@ -280,7 +280,7 @@ fun PermissionsScreen() {
         if (!perms.overlay || !perms.listener) {
             Card {
                 Column(Modifier.padding(16.dp)) {
-                    Text("\"APP WAS DENIED ACCESS\" / \"RESTRICTED SETTING\"?", style = MaterialTheme.typography.labelMedium, color = Nothing.Red)
+                    Text("\"APP WAS DENIED ACCESS\" / \"RESTRICTED SETTING\"?", style = MaterialTheme.typography.labelMedium, color = Nothing.RedText)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Android 15+ locks \"Display over other apps\" and notification access for apps installed from a browser. Unlock once:\n" +

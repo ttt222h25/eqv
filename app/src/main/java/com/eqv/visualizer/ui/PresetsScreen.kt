@@ -201,7 +201,7 @@ private fun PresetRow(
                 DropdownMenuItem(text = { Text("Duplicate") }, onClick = { menu = false; onDuplicate() })
                 DropdownMenuItem(text = { Text("Export file") }, onClick = { menu = false; onExport() })
                 DropdownMenuItem(text = { Text("Copy JSON") }, onClick = { menu = false; onCopy() })
-                if (!p.builtIn) DropdownMenuItem(text = { Text("Delete", color = Nothing.Red) }, onClick = { menu = false; onDelete() })
+                if (!p.builtIn) DropdownMenuItem(text = { Text("Delete", color = Nothing.RedText) }, onClick = { menu = false; onDelete() })
             }
         }
     }
@@ -244,7 +244,7 @@ private fun TextDialog(
                 label = { Text(label) },
             )
         },
-        confirmButton = { TextButton(onClick = { onOk(text) }) { Text("OK", color = Nothing.Red) } },
+        confirmButton = { TextButton(onClick = { onOk(text) }) { Text("OK", color = Nothing.RedText) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL", color = Nothing.Grey) } },
     )
 }

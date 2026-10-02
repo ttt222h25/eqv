@@ -65,8 +65,8 @@ import kotlin.math.roundToInt
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = Nothing.Red,
+        style = MaterialTheme.typography.labelLarge,
+        color = Nothing.RedText,
         modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
     )
 }
@@ -130,7 +130,7 @@ fun SliderRow(
             colors = SliderDefaults.colors(
                 thumbColor = Nothing.White,
                 activeTrackColor = Nothing.Red,
-                inactiveTrackColor = Nothing.SurfaceHigh,
+                inactiveTrackColor = Nothing.Line,
                 activeTickColor = Color.Transparent,
                 inactiveTickColor = Color.Transparent,
             ),
@@ -326,7 +326,7 @@ fun ColorPickerDialog(initial: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onPick(current) }) { Text("USE", color = Nothing.Red) } },
+        confirmButton = { TextButton(onClick = { onPick(current) }) { Text("USE", color = Nothing.RedText) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL", color = Nothing.Grey) } },
     )
 }
@@ -337,7 +337,7 @@ private fun PickerSlider(label: String, value: Float, range: ClosedFloatingPoint
         Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(84.dp))
         Slider(
             value = value, onValueChange = onChange, valueRange = range,
-            colors = SliderDefaults.colors(thumbColor = Nothing.White, activeTrackColor = Nothing.Red, inactiveTrackColor = Nothing.SurfaceHigh),
+            colors = SliderDefaults.colors(thumbColor = Nothing.White, activeTrackColor = Nothing.Red, inactiveTrackColor = Nothing.Line),
         )
     }
 }
@@ -415,7 +415,7 @@ fun AppPickerDialog(title: String, selected: List<String>, onDismiss: () -> Unit
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onDone(chosen.toList()) }) { Text("DONE", color = Nothing.Red) } },
+        confirmButton = { TextButton(onClick = { onDone(chosen.toList()) }) { Text("DONE", color = Nothing.RedText) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL", color = Nothing.Grey) } },
     )
 }
