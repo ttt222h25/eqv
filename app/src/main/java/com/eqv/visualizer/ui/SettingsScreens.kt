@@ -295,11 +295,15 @@ fun FilterScreen() {
         }
         SliderRow("Strength", f.amount, 0f..1f, ::fmtPct) { v -> repo.updateLook { it.copy(filter = it.filter.copy(amount = v)) } }
 
-        SectionTitle("On the beat")
-        ChoiceRow("Hit", BeatFx.entries, f.beatFx, ::beatFxName) { v -> edit { it.copy(beatFx = v) } }
-        SliderRow("Hit strength", f.beatFxStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(beatFxStrength = v) } }
-        SliderRow("Hit length", f.beatFxMs, 60f..600f, ::fmtMs) { v -> edit { it.copy(beatFxMs = v) } }
-        SliderRow("Bass drive", f.bassDrive, 0f..1f, { if (it < 0.02f) "static" else fmtPct(it) }) { v -> edit { it.copy(bassDrive = v) } }
+        SectionTitle("Music")
+        SliderRow("React to music", f.react, 0f..1f, { if (it < 0.02f) "static" else fmtPct(it) }) { v -> edit { it.copy(react = v) } }
+        Hint("Bass drives the scanlines, vignette and tube edge; mids the RGB stripes and pixel grid; treble the grain, flicker and tape noise; loudness the color wash and how fast the roll bar and lines move.")
+        ChoiceRow("On the beat", BeatFx.entries, f.beatFx, ::beatFxName) { v -> edit { it.copy(beatFx = v) } }
+        if (f.beatFx != BeatFx.NONE) {
+            SliderRow("Hit strength", f.beatFxStrength, 0f..1f, ::fmtPct) { v -> edit { it.copy(beatFxStrength = v) } }
+            SliderRow("Hit length", f.beatFxMs, 60f..600f, ::fmtMs) { v -> edit { it.copy(beatFxMs = v) } }
+        }
+        SwitchRow("Wash color from album art", f.tintFromAlbum, "The color wash follows the song's cover") { v -> edit { it.copy(tintFromAlbum = v) } }
 
         SectionTitle("Lines")
         SliderRow("Scanlines", f.scanlines, 0f..1f, ::fmtPct) { v -> edit { it.copy(scanlines = v) } }

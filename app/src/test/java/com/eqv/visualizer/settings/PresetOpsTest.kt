@@ -133,7 +133,7 @@ class PresetOpsTest {
             assertTrue(p.name, l.pulse.strength in 0f..1f && l.thump.strength in 0f..1f)
             assertTrue(p.name, l.beat.lowHz < l.beat.highHz)
             val f = l.filter
-            for (v in listOf(f.amount, f.scanlines, f.mask, f.grid, f.vignette, f.bezel, f.grain, f.rollBar, f.flicker, f.tracking, f.bassDrive, f.beatFxStrength)) {
+            for (v in listOf(f.amount, f.scanlines, f.mask, f.grid, f.vignette, f.bezel, f.grain, f.rollBar, f.flicker, f.tracking, f.react, f.beatFxStrength)) {
                 assertTrue(p.name, v in 0f..1f)
             }
             assertTrue(p.name, f.tintAmount in 0f..0.4f)

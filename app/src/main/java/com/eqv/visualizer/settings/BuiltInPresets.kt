@@ -621,7 +621,7 @@ object BuiltInPresets {
                         pulse = noPulse,
                         filter = FilterLayer(
                             enabled = true, style = FilterStyle.CUSTOM, scanlines = 0.3f, scanlineDp = 3f, vignette = 0.3f,
-                            rollBar = 0.2f, rollSpeed = 0.06f, bassDrive = 0.3f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.5f,
+                            rollBar = 0.2f, rollSpeed = 0.06f, react = 0.5f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.5f,
                         ),
                         motion = Motion(bandCount = 40, sensitivity = 1.15f, attackMs = 15f, decayMs = 240f),
                         beat = BeatConfig(sensitivity = 0.55f, rippleStrength = 0.7f),

@@ -252,8 +252,14 @@ data class FilterLayer(
     val flicker: Float = 0f,
     /** VHS tracking noise at the bottom + a wandering noise line. */
     val tracking: Float = 0f,
-    /** How much the bass level boosts the filter (0 = static). */
-    val bassDrive: Float = 0.3f,
+    /**
+     * How much the filter follows the music, 0 = static. Bass drives scanlines, vignette and the
+     * tube edge; mids the RGB stripes and pixel grid; treble the grain, flicker and tracking
+     * noise; loudness the roll bar and drift speed and the color wash.
+     */
+    val react: Float = 0.5f,
+    /** Take the wash color from the album art instead of [tint]. */
+    val tintFromAlbum: Boolean = false,
     val beatFx: BeatFx = BeatFx.NONE,
     val beatFxStrength: Float = 0.6f,
     val beatFxMs: Float = 220f,
@@ -266,39 +272,39 @@ object FilterStyles {
             enabled = true, style = style,
             scanlines = 0.5f, scanlineDp = 3f, mask = 0.25f, maskDp = 1.5f,
             vignette = 0.35f, bezel = 0.55f, grain = 0.08f, rollBar = 0.25f, rollSpeed = 0.08f, flicker = 0.08f,
-            bassDrive = 0.25f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.6f, beatFxMs = 200f,
+            react = 0.5f, beatFx = BeatFx.SCAN_JUMP, beatFxStrength = 0.6f, beatFxMs = 200f,
         )
         FilterStyle.VHS -> FilterLayer(
             enabled = true, style = style,
             scanlines = 0.25f, scanlineDp = 4f, vignette = 0.3f, tint = 0xFFFFD9B0.toInt(), tintAmount = 0.06f,
             grain = 0.35f, grainFps = 30f, tracking = 0.6f, rollBar = 0.12f, rollSpeed = 0.05f, flicker = 0.05f,
-            bassDrive = 0.3f, beatFx = BeatFx.GLITCH, beatFxStrength = 0.7f, beatFxMs = 240f,
+            react = 0.6f, beatFx = BeatFx.GLITCH, beatFxStrength = 0.7f, beatFxMs = 240f,
         )
         FilterStyle.FILM -> FilterLayer(
             enabled = true, style = style,
             vignette = 0.5f, tint = 0xFFFFC98A.toInt(), tintAmount = 0.1f, grain = 0.45f, grainFps = 24f, flicker = 0.15f,
-            bassDrive = 0.2f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 160f,
+            react = 0.4f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 160f,
         )
         FilterStyle.NIGHT_VISION -> FilterLayer(
             enabled = true, style = style,
             scanlines = 0.25f, scanlineDp = 2.5f, vignette = 0.85f, tint = 0xFF39FF6A.toInt(), tintAmount = 0.22f,
             grain = 0.55f, grainFps = 30f, flicker = 0.06f,
-            bassDrive = 0.3f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 180f,
+            react = 0.5f, beatFx = BeatFx.FLICKER, beatFxStrength = 0.5f, beatFxMs = 180f,
         )
         FilterStyle.POCKET_LCD -> FilterLayer(
             enabled = true, style = style,
             grid = 0.45f, gridDp = 4f, gridRound = false, vignette = 0.15f, tint = 0xFF9BBC0F.toInt(), tintAmount = 0.25f,
-            bassDrive = 0f, beatFx = BeatFx.NONE,
+            react = 0.3f, beatFx = BeatFx.NONE,
         )
         FilterStyle.DOT_MATRIX -> FilterLayer(
             enabled = true, style = style,
             grid = 0.6f, gridDp = 5f, gridRound = true, vignette = 0.2f,
-            bassDrive = 0.2f, beatFx = BeatFx.VIGNETTE_PUMP, beatFxStrength = 0.5f, beatFxMs = 260f,
+            react = 0.6f, beatFx = BeatFx.VIGNETTE_PUMP, beatFxStrength = 0.5f, beatFxMs = 260f,
         )
         FilterStyle.GLITCH -> FilterLayer(
             enabled = true, style = style,
             scanlines = 0.2f, scanlineDp = 2f, mask = 0.15f, grain = 0.2f, grainFps = 30f, tracking = 0.2f,
-            bassDrive = 0.4f, beatFx = BeatFx.GLITCH, beatFxStrength = 1f, beatFxMs = 260f,
+            react = 0.8f, beatFx = BeatFx.GLITCH, beatFxStrength = 1f, beatFxMs = 260f,
         )
         FilterStyle.CUSTOM -> FilterLayer(enabled = true, style = style)
     }

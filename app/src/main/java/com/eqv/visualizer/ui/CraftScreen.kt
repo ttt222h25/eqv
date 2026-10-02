@@ -337,6 +337,8 @@ private fun FilterStep(f: FilterLayer, onChange: (FilterLayer) -> Unit) {
     }
     if (!f.enabled) return
     SliderRow("Strength", f.amount, 0f..1f, { "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(amount = v)) }
+    SliderRow("React to music", f.react, 0f..1f, { if (it < 0.02f) "static" else "${(it * 100).roundToInt()}%" }) { v -> onChange(f.copy(react = v)) }
+    SwitchRow("Wash color from album art", f.tintFromAlbum) { v -> onChange(f.copy(tintFromAlbum = v)) }
     ChoiceRow("On the beat", BeatFx.entries, f.beatFx, {
         when (it) {
             BeatFx.NONE -> "Nothing"
