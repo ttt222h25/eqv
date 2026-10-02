@@ -223,11 +223,11 @@ fun sourceName(m: AudioSourceMode) = when (m) {
 }
 
 fun sourceHint(m: AudioSourceMode) = when (m) {
-    AudioSourceMode.AUTO -> "System visualizer first (works with Spotify), microphone if it fails or stays silent while music plays."
-    AudioSourceMode.VISUALIZER -> "Android's output-mix visualizer. 8-bit, but works with every player."
-    AudioSourceMode.PLAYBACK_CAPTURE -> "Full-quality capture. Asks for consent each session, shows a red chip, stops when the screen locks. Spotify blocks it (silence) — Auto falls back."
-    AudioSourceMode.MIC -> "Listens through the microphone. Works anywhere, shows the green privacy dot."
-    AudioSourceMode.DEMO -> "Synthetic beat for testing visuals without music."
+    AudioSourceMode.AUTO -> "Best choice. System visualizer, falls back to the mic."
+    AudioSourceMode.VISUALIZER -> "Works with every player. Lower detail."
+    AudioSourceMode.PLAYBACK_CAPTURE -> "Full quality. Asks each time; Spotify blocks it."
+    AudioSourceMode.MIC -> "Hears the room. Works anywhere."
+    AudioSourceMode.DEMO -> "A built-in beat, no music needed."
 }
 
 // ============================================================================ setup

@@ -333,7 +333,7 @@ half4 main(float2 pos) {
     // Grain: signed noise, light and dark specks.
     if (uGrain.x > 0.001) {
         float n = hash(floor(pos / uGrain.z) + uGrain.y * float2(17.0, 31.0)) * 2.0 - 1.0;
-        float a = abs(n) * uGrain.x * 0.35;
+        float a = abs(n) * uGrain.x * 0.25;
         if (n > 0.0) {
             light = light * (1.0 - a) + float3(a);
             la = la + a - la * a;
@@ -356,23 +356,19 @@ half4 main(float2 pos) {
         la = la + a - la * a;
     }
 
-    // Beat glitch: a few horizontal bands of colored/dark blocks.
+    // Beat glitch: a few thin horizontal slices of cyan / magenta, like a torn signal.
     if (uGlitch.x > 0.001) {
         for (int i = 0; i < 4; i++) {
             float fi = float(i);
             float cy = hash(float2(fi, uGlitch.y)) * uSize.y;
-            float hh = (0.008 + 0.035 * hash(float2(fi + 7.0, uGlitch.y))) * uSize.y;
+            float hh = (0.002 + 0.008 * hash(float2(fi + 7.0, uGlitch.y))) * uSize.y;
             if (abs(pos.y - cy) < hh) {
-                float bw = uSize.x * (0.03 + 0.12 * hash(float2(fi + 13.0, uGlitch.y)));
+                float bw = uSize.x * (0.05 + 0.2 * hash(float2(fi + 13.0, uGlitch.y)));
                 float r = hash(float2(floor(pos.x / bw) + fi * 11.0, uGlitch.y));
-                float3 c = r < 0.33 ? float3(1.0, 0.1, 0.25) : (r < 0.66 ? float3(0.1, 0.9, 1.0) : float3(1.0));
-                float a = uGlitch.x * (0.2 + 0.4 * r) * step(0.25, r);
+                float3 c = r < 0.5 ? float3(1.0, 0.15, 0.6) : float3(0.1, 0.9, 1.0);
+                float a = uGlitch.x * (0.12 + 0.2 * r) * step(0.35, r);
                 light = light * (1.0 - a) + c * a;
                 la = la + a - la * a;
-                if (r > 0.85) {
-                    float d = uGlitch.x * 0.6;
-                    dark = dark + d - dark * d;
-                }
             }
         }
     }

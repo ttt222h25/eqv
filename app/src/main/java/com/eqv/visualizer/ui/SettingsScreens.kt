@@ -335,12 +335,21 @@ fun FilterScreen() {
     fun edit(t: (FilterLayer) -> FilterLayer) = repo.updateLook { it.copy(filter = t(it.filter).copy(style = FilterStyle.CUSTOM)) }
     ScrollColumn {
         Group {
-            SwitchRow("Screen filter", f.enabled, "Old TV, tape, film… drawn over every app") { v -> repo.updateLook { it.copy(filter = it.filter.copy(enabled = v)) } }
-            if (f.enabled) {
-                ChoiceRow("Style", FilterStyle.entries.filter { it != FilterStyle.CUSTOM || f.style == FilterStyle.CUSTOM }, f.style, ::filterLabel) { st ->
-                    if (st != FilterStyle.CUSTOM) repo.updateLook { it.copy(filter = FilterStyles.of(st).copy(amount = it.filter.amount)) }
+            // "Off" plus every style: picking a style is how you turn the filter on.
+            val choices = listOf<FilterStyle?>(null) + FilterStyle.entries.filter { it != FilterStyle.CUSTOM || f.style == FilterStyle.CUSTOM }
+            ChoiceRow("Style", choices, if (f.enabled) f.style else null, { it?.let(::filterLabel) ?: "Off" }) { st ->
+                if (st == null) {
+                    repo.updateLook { it.copy(filter = it.filter.copy(enabled = false)) }
+                } else if (st == FilterStyle.CUSTOM) {
+                    repo.updateLook { it.copy(filter = it.filter.copy(enabled = true)) }
+                } else {
+                    repo.updateLook { it.copy(filter = FilterStyles.of(st).copy(amount = it.filter.amount)) }
                 }
+            }
+            if (f.enabled) {
                 SliderRow("Strength", f.amount, 0f..1f, ::fmtPct) { v -> repo.updateLook { it.copy(filter = it.filter.copy(amount = v)) } }
+            } else {
+                Hint("Old TV, tape, film and more, drawn over every app.")
             }
         }
         if (f.enabled) {

@@ -337,7 +337,7 @@ private val modeNames = mapOf(
 /** Full editor for a layer's [ColorSpec]. */
 @Composable
 fun ColorSpecEditor(spec: ColorSpec, onChange: (ColorSpec) -> Unit) {
-    ChoiceRow("Color", ColorMode.entries, spec.mode, { modeNames[it] ?: it.name }) { onChange(spec.copy(mode = it)) }
+    ChoiceRow("Type", ColorMode.entries, spec.mode, { modeNames[it] ?: it.name }) { onChange(spec.copy(mode = it)) }
     when (spec.mode) {
         ColorMode.SOLID -> ColorRow("Color", spec.primary) { onChange(spec.copy(primary = it)) }
         ColorMode.GRADIENT -> {

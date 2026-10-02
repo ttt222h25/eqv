@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -247,8 +248,8 @@ private fun MetersPanel(modifier: Modifier) {
 @Composable
 private fun Meter(label: String, v: Float, color: Color, modifier: Modifier) {
     Column(modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Canvas(Modifier.weight(1f).fillMaxWidth()) {
-            drawRect(Nothing.SurfaceHigh, Offset.Zero, size)
+        Canvas(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+            drawRect(Nothing.Surface, Offset.Zero, size)
             val h = size.height * v.coerceIn(0f, 1f)
             drawRect(color, Offset(0f, size.height - h), Size(size.width, h))
         }
