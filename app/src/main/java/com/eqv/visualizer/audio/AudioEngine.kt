@@ -54,7 +54,12 @@ object AudioEngine {
         this.isMusicPlaying = isMusicPlaying
     }
 
+    /** Screenshot tests feed [ring] themselves; the engine then never starts a thread. */
+    @Volatile
+    var disabledForTests = false
+
     fun acquire(tag: String) {
+        if (disabledForTests) return
         synchronized(lock) {
             clients.add(tag)
             if (thread == null) startThread()

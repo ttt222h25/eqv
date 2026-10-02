@@ -64,3 +64,26 @@ jobs:
             --target "${{ github.sha }}" \
             --title "EQV build ${{ github.run_number }}" \
             --notes "Debug build ${{ github.run_number }} from ${{ github.sha }}. Install eqv.apk on the phone; it updates in place over earlier builds."
+
+      # Screenshots of every screen and every preset's overlay (Robolectric), published to the
+      # "screens" pre-release so they can be reviewed without a phone. Never blocks the APK.
+      - name: Screenshots
+        id: shots
+        continue-on-error: true
+        run: ./gradlew --no-daemon testDebugUnitTest -Pshots
+
+      - name: Publish screenshots
+        if: always() && github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p shots
+          (cd app/build/test-results && zip -qr ../../../shots/test-results.zip . ) || true
+          gh release delete screens --yes --cleanup-tag || true
+          gh release create screens shots/*.png shots/test-results.zip \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --title "Screenshots ${{ github.run_number }}" \
+            --notes "Rendered by CI from ${{ github.sha }} (screenshot step: ${{ steps.shots.outcome }})." || \
+          gh release create screens shots/test-results.zip --prerelease --target "${{ github.sha }}" \
+            --title "Screenshots ${{ github.run_number }} (none)" --notes "Screenshot step: ${{ steps.shots.outcome }}"

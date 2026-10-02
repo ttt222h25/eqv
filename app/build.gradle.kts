@@ -54,6 +54,7 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
     }
 
     lint {
@@ -86,4 +87,25 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
+
+    // Screenshot tests (Robolectric renders the real UI and overlay to PNGs; see shots/).
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+}
+
+// Screenshots only run with -Pshots (CI publishes them); normal test runs skip them.
+tasks.withType<Test>().configureEach {
+    if (project.hasProperty("shots")) {
+        filter.includeTestsMatching("com.eqv.visualizer.shots.*")
+        systemProperty("roborazzi.test.record", "true")
+        systemProperty("shots.dir", rootProject.file("shots").absolutePath)
+        maxHeapSize = "3g"
+    } else {
+        filter.excludeTestsMatching("com.eqv.visualizer.shots.*")
+    }
 }

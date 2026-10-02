@@ -60,8 +60,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun App() {
-    val stack = remember { mutableStateListOf(Screen.HOME) }
+fun App(start: Screen = Screen.HOME) {
+    val stack = remember { mutableStateListOf(Screen.HOME).apply { if (start != Screen.HOME) add(start) } }
     val screen = stack.last()
     val go: (Screen) -> Unit = { stack.add(it) }
     BackHandler(enabled = stack.size > 1) { stack.removeAt(stack.lastIndex) }
