@@ -147,6 +147,9 @@ fun showFakeSong(context: android.content.Context, position: com.eqv.visualizer.
         p.color = 0xFFFFFFFF.toInt()
         drawCircle(150f, 150f, 60f, p)
     }
+    // What the listener and palette extractor would set for this cover (they run async).
+    com.eqv.visualizer.RuntimeState.albumArt = art
+    com.eqv.visualizer.RuntimeState.albumColors = intArrayOf(0xFFFF2BD6.toInt(), 0xFF22E5FF.toInt(), 0xFF8E44FF.toInt())
     val now = android.os.SystemClock.elapsedRealtime()
     com.eqv.visualizer.media.MediaMonitor.state.value = com.eqv.visualizer.media.MediaState(
         connected = true,

@@ -269,4 +269,88 @@ half4 main(float2 p) {
     return half4(half3(float3(uColor.rgb) * v), half(v));
 }
 """
+
+    /**
+     * Room background: soft blobs of three colors drifting over a deep base (uBlobs = 1), plus
+     * soft floating lights (uParticles). With uBlobs = 0 only the lights are drawn, over the
+     * blurred cover. Distances are in units of the short screen side.
+     */
+    const val ROOM_GLOW = """
+uniform float2 uSize;
+uniform float uTime;
+uniform float uPTime;
+uniform float uBass;
+uniform float uLevel;
+uniform float uTreble;
+uniform float uBright;
+uniform float uBlobs;
+uniform float uParticles;
+layout(color) uniform half4 uC0;
+layout(color) uniform half4 uC1;
+layout(color) uniform half4 uC2;
+layout(color) uniform half4 uBase;
+
+float hash(float n) {
+    return fract(sin(n) * 43758.5453);
+}
+
+float blob(float2 uv, float2 c, float r) {
+    float2 d = uv - c;
+    return exp(-dot(d, d) / (r * r));
+}
+
+half4 main(float2 p) {
+    float s = min(uSize.x, uSize.y);
+    float2 uv = p / s;
+    float2 box = uSize / s;
+    float t = uTime;
+    float3 c0 = float3(uC0.rgb);
+    float3 c1 = float3(uC1.rgb);
+    float3 c2 = float3(uC2.rgb);
+    float3 base = float3(uBase.rgb);
+
+    float3 col = float3(0.0);
+    float alpha = 0.0;
+    if (uBlobs > 0.5) {
+        float r = 0.5 + 0.3 * uBass;
+        float w0 = blob(uv, box * float2(0.5 + 0.38 * sin(t * 0.31), 0.5 + 0.32 * cos(t * 0.23)), r);
+        float w1 = blob(uv, box * float2(0.5 + 0.40 * cos(t * 0.19 + 1.7), 0.5 + 0.36 * sin(t * 0.27 + 0.5)), r * 0.9);
+        float w2 = blob(uv, box * float2(0.5 + 0.34 * sin(t * 0.23 + 3.1), 0.5 + 0.40 * cos(t * 0.17 + 2.2)), r * 0.95);
+        float w3 = blob(uv, box * float2(0.5 + 0.30 * cos(t * 0.29 + 4.0), 0.5 + 0.30 * sin(t * 0.21 + 3.6)), r * 0.75);
+        float3 c3 = mix(c0, c2, 0.5);
+        float sum = 0.45 + w0 + w1 + w2 + w3;
+        float3 mesh = (base * 0.45 + c0 * w0 + c1 * w1 + c2 * w2 + c3 * w3) / sum;
+        float glow = clamp(w0 + w1 + w2 + w3, 0.0, 1.0);
+        col = mix(base, mesh, 0.35 + 0.65 * glow) * uBright * (0.75 + 0.35 * uLevel);
+        alpha = 1.0;
+    }
+
+    if (uParticles > 0.001) {
+        float3 light = float3(0.0);
+        float cover = 0.0;
+        for (int i = 0; i < 14; i++) {
+            float fi = float(i);
+            float speed = 0.03 + 0.06 * hash(fi * 3.1 + 0.7);
+            float x = hash(fi * 1.7 + 0.3) * box.x + 0.06 * sin(uPTime * 0.5 + fi * 1.3);
+            float y = box.y * (1.15 - 1.3 * fract(hash(fi * 7.3 + 0.1) + uPTime * speed));
+            float size = (0.012 + 0.035 * hash(fi * 5.9 + 0.2)) * (1.0 + 0.8 * uTreble);
+            float d = length(uv - float2(x, y));
+            float m = exp(-(d * d) / (size * size));
+            float twinkle = 0.55 + 0.45 * sin(uPTime * (0.8 + hash(fi + 0.5)) + fi * 2.0);
+            float k = fract(fi / 3.0);
+            float3 pc = k < 0.3 ? c0 : (k < 0.6 ? c1 : c2);
+            light += mix(pc, float3(1.0), 0.35) * m * twinkle;
+            cover = max(cover, m * twinkle);
+        }
+        float amt = uParticles * (0.7 + 0.5 * uLevel);
+        col += light * amt;
+        alpha = max(alpha, clamp(cover * amt * 0.6, 0.0, 1.0));
+    }
+
+    // A whisper of noise so the soft gradients don't band.
+    float n = fract(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+    col += (n - 0.5) / 255.0 * alpha;
+    return half4(half3(clamp(col, 0.0, 1.0)), half(alpha));
+}
+"""
 }

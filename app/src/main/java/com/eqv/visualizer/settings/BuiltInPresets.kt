@@ -227,6 +227,57 @@ object BuiltInPresets {
         PresetGroup(
             "Chill",
             listOf(
+                // Everything soft: slow, glowing, in the cover's colors. Made for the room's album glow.
+                p(
+                    "dream", "Dream",
+                    Look(
+                        edge = EdgeLayer(
+                            color = album(glow = 0.9f, opacity = 0.55f),
+                            thicknessDp = 1f, glowWidthDp = 40f, reactivity = 0.1f, idleLevel = 0.15f,
+                        ),
+                        bars = off,
+                        radial = RadialLayer(
+                            enabled = true, style = RadialStyle.FILLED,
+                            color = album(glow = 0.9f, opacity = 0.6f),
+                            radius = 0.16f, length = 0.12f, thicknessDp = 2f, rotationSpeed = 0.015f,
+                            beatScale = 0.2f, bassScale = 0.5f, centerFill = 0.15f,
+                        ),
+                        wave = WaveLayer(
+                            enabled = true, style = WaveStyle.MIRRORED,
+                            color = album(glow = 0.85f, opacity = 0.6f),
+                            positionY = 0.88f, amplitude = 0.04f, thicknessDp = 2f, smoothness = 0.9f,
+                        ),
+                        pulse = PulseLayer(
+                            enabled = true, style = PulseStyle.RING, color = album(),
+                            strength = 0.25f, decayMs = 700f, ringWidthDp = 6f, ringCount = 2, ringFill = 0.3f,
+                        ),
+                        motion = Motion(bandCount = 32, attackMs = 90f, decayMs = 750f, peakHoldMs = 900f, sensitivity = 0.9f),
+                        beat = BeatConfig(sensitivity = 0.4f, rippleStrength = 0.3f),
+                    ),
+                ),
+                // A ring of soft glowing dots that blooms with the bass.
+                p(
+                    "bloom", "Bloom",
+                    Look(
+                        edge = EdgeLayer(
+                            color = gradient(PINK, PEACH, glow = 0.8f, opacity = 0.5f),
+                            thicknessDp = 1f, glowWidthDp = 36f, reactivity = 0.1f, idleLevel = 0.12f,
+                        ),
+                        bars = off,
+                        radial = RadialLayer(
+                            enabled = true, style = RadialStyle.DOTS, direction = RadialDirection.BOTH,
+                            color = gradient(PINK, AMBER, glow = 1f, opacity = 0.8f),
+                            radius = 0.22f, length = 0.1f, thicknessDp = 5f, rotationSpeed = -0.02f,
+                            barCount = 96, bassScale = 0.4f, beatScale = 0.15f, baseCircle = 0.2f,
+                        ),
+                        pulse = PulseLayer(
+                            enabled = true, style = PulseStyle.RING, color = solid(PEACH),
+                            strength = 0.3f, decayMs = 650f, ringStart = 0.1f, ringGrowth = 0.5f, ringFill = 0.4f,
+                        ),
+                        motion = Motion(bandCount = 32, attackMs = 70f, decayMs = 600f, peakHoldMs = 800f),
+                        beat = BeatConfig(sensitivity = 0.45f, rippleStrength = 0.35f),
+                    ),
+                ),
                 p(
                     "calm", "Calm",
                     Look(

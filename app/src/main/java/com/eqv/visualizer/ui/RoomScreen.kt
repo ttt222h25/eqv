@@ -66,6 +66,7 @@ import com.eqv.visualizer.media.MediaMonitor
 import com.eqv.visualizer.render.VisualizerView
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.Room
+import com.eqv.visualizer.settings.RoomBackdrop
 import com.eqv.visualizer.settings.CoverStyle
 import com.eqv.visualizer.settings.RoomColors
 import com.eqv.visualizer.settings.RoomCorner
@@ -96,7 +97,8 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
     val perms = rememberPerms()
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    Box(Modifier.fillMaxSize().background(Color(room.background))) {
+    // Album backgrounds start dark, so there's no flash of the solid color before the first frame.
+    Box(Modifier.fillMaxSize().background(if (room.backdrop == RoomBackdrop.SOLID) Color(room.background) else Nothing.Black)) {
         AndroidView(
             factory = { ctx ->
                 VisualizerView(ctx, preview = false, room = true).also { v ->
@@ -123,7 +125,7 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
                 room = room,
                 track = media.top,
                 presetName = PresetOps.find(s, s.activePresetId)?.name ?: "Custom",
-                textColor = infoColor(room.background),
+                textColor = if (room.backdrop == RoomBackdrop.SOLID) infoColor(room.background) else Nothing.White,
                 // Clear of the camera hole and rounded corners, whichever way the phone is turned.
                 modifier = Modifier
                     .align(cornerAlignment(room.infoPosition))
@@ -173,6 +175,15 @@ private fun LockOrientation(orientation: RoomOrientation) {
         onDispose { activity.requestedOrientation = before }
     }
 }
+
+fun backdropName(b: RoomBackdrop) = when (b) {
+    RoomBackdrop.SOLID -> "Solid color"
+    RoomBackdrop.ALBUM_GLOW -> "Album glow"
+    RoomBackdrop.ALBUM_COVER -> "Blurred cover"
+}
+
+private fun pct(v: Float) = "${(v * 100).roundToInt()}%"
+private fun pctOff(v: Float) = if (v < 0.01f) "off" else pct(v)
 
 fun orientationName(o: RoomOrientation) = when (o) {
     RoomOrientation.AUTO -> "Auto-rotate"
@@ -261,6 +272,27 @@ private fun RoomControls(
         Hint("Tap anywhere on the screen to hide or show these controls.")
 
         SectionTitle("Background")
+        ChoiceRow(null, RoomBackdrop.entries, room.backdrop, ::backdropName) { v -> onEdit { it.copy(backdrop = v) } }
+        if (room.backdrop != RoomBackdrop.SOLID) {
+            Hint(
+                if (room.backdrop == RoomBackdrop.ALBUM_GLOW) "Soft light in the colors of the song's cover, drifting and breathing with the music."
+                else "The song's cover, blurred, slowly drifting and pulsing with the bass. Fades to the next one when the song changes.",
+            )
+            if (!canReadSongs) Hint("Needs notification access to see the cover: Home → More → Setup. Until then it uses the color below.")
+            SliderRow("Darkness", room.dim, 0f..0.9f, ::pct) { v -> onEdit { it.copy(dim = v) } }
+            SliderRow("Drift", room.drift, 0f..1f, { if (it < 0.02f) "still" else pct(it) }) { v -> onEdit { it.copy(drift = v) } }
+            SliderRow("React to music", room.react, 0f..1f, ::pctOff) { v -> onEdit { it.copy(react = v) } }
+            SliderRow("Soft particles", room.particles, 0f..1f, ::pctOff) { v -> onEdit { it.copy(particles = v) } }
+            if (room.backdrop == RoomBackdrop.ALBUM_COVER) {
+                SliderRow("Blur", room.blur, 0f..1f, ::pct) { v -> onEdit { it.copy(blur = v) } }
+            }
+            Text(
+                "WHEN THERE'S NO COVER",
+                style = MaterialTheme.typography.labelMedium,
+                color = Nothing.Grey,
+                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 8.dp),
+            )
+        }
         FlowRow(
             Modifier.padding(horizontal = 18.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -278,6 +310,10 @@ private fun RoomControls(
             color = Nothing.Grey,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
         )
+
+        SectionTitle("Soft visuals")
+        SliderRow("Softness", room.soften, 0f..1f, { if (it < 0.01f) "sharp" else pct(it) }) { v -> onEdit { it.copy(soften = v) } }
+        Hint("Blurs the edges of the visuals into a dreamy glow. 0 = sharp (best for green screen keying).")
 
         SectionTitle("Orientation")
         ChoiceRow(null, RoomOrientation.entries, room.orientation, ::orientationName) { v -> onEdit { it.copy(orientation = v) } }

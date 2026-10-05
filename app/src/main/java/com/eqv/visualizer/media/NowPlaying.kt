@@ -168,6 +168,7 @@ class NowPlayingListener : NotificationListenerService() {
         val prev = lastArt
         if (art != null && (prev == null || !art.sameAs(prev))) {
             lastArt = art
+            RuntimeState.albumArt = art
             AlbumPalette.extract(art)
         }
     }
