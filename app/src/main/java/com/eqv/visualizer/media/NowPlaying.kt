@@ -31,7 +31,22 @@ data class NowPlaying(
     val title: String?,
     val artist: String?,
     val playing: Boolean,
-)
+    val album: String? = null,
+    /** Album cover as the player shares it (Spotify does); null if it shares none. */
+    val art: Bitmap? = null,
+    /** Track length, 0 when unknown. */
+    val durationMs: Long = 0L,
+    /** Playback position at [positionAt] (SystemClock.elapsedRealtime), moving at [speed]. */
+    val positionMs: Long = 0L,
+    val positionAt: Long = 0L,
+    val speed: Float = 0f,
+) {
+    /** Where the track is now, extrapolated from the last position the player reported. */
+    fun positionNow(nowElapsed: Long): Long {
+        val p = positionMs + if (playing) ((nowElapsed - positionAt) * speed).toLong() else 0L
+        return if (durationMs > 0) p.coerceIn(0L, durationMs) else p.coerceAtLeast(0L)
+    }
+}
 
 data class MediaState(
     val connected: Boolean = false,
@@ -125,12 +140,20 @@ class NowPlayingListener : NotificationListenerService() {
     private fun refresh() {
         val sessions = callbacks.values.map { (c, _) ->
             val md = c.metadata
+            val ps = c.playbackState
             NowPlaying(
                 packageName = c.packageName,
                 title = md?.getString(MediaMetadata.METADATA_KEY_TITLE),
-                artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST),
-                playing = c.playbackState?.state == PlaybackState.STATE_PLAYING ||
-                    c.playbackState?.state == PlaybackState.STATE_BUFFERING,
+                artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                    ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST),
+                playing = ps?.state == PlaybackState.STATE_PLAYING ||
+                    ps?.state == PlaybackState.STATE_BUFFERING,
+                album = md?.getString(MediaMetadata.METADATA_KEY_ALBUM),
+                art = md?.let(::artOf),
+                durationMs = md?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L,
+                positionMs = ps?.position?.coerceAtLeast(0L) ?: 0L,
+                positionAt = ps?.lastPositionUpdateTime ?: 0L,
+                speed = if (ps?.state == PlaybackState.STATE_PLAYING) ps.playbackSpeed else 0f,
             )
         }
         MediaMonitor.state.value = MediaState(connected = true, sessions = sessions)
@@ -140,15 +163,19 @@ class NowPlayingListener : NotificationListenerService() {
         val top = callbacks.values.firstOrNull { (c, _) ->
             c.playbackState?.state == PlaybackState.STATE_PLAYING && behavior.allowsSource(c.packageName)
         }?.first ?: callbacks.values.firstOrNull()?.first
-        val md = top?.metadata
-        val art = md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-            ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-            ?: md?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-        if (art != null && art !== lastArt) {
+        val art = top?.metadata?.let(::artOf)
+        // Each read hands back a fresh copy of the picture: compare pixels, not objects.
+        val prev = lastArt
+        if (art != null && (prev == null || !art.sameAs(prev))) {
             lastArt = art
             AlbumPalette.extract(art)
         }
     }
+
+    private fun artOf(md: MediaMetadata): Bitmap? =
+        md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: md.getBitmap(MediaMetadata.METADATA_KEY_ART)
+            ?: md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
 
     companion object {
         fun isEnabled(context: Context): Boolean {

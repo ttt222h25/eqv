@@ -43,6 +43,7 @@ class UiShots(private val screen: Screen) {
         // A busy moment of the demo song, so the live preview shows something.
         val nothing = BuiltInPresets.all.first()
         SimulatedAudio(nothing.look, AudioEngine.ring).advanceTo(3_200_000_000L)
+        if (screen == Screen.ROOM) showFakeSong(rule.activity)
         // Manual clock: the preview and meters animate forever, so "idle" would never come.
         rule.mainClock.autoAdvance = false
         // MainActivity already set its content; swap what its ComposeView shows.

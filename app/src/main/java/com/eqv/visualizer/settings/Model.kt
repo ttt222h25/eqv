@@ -43,11 +43,41 @@ data class Room(
     val background: Int = RoomColors.GREEN,
     /** Draw the preset's screen filter in the room (off keeps the key color clean). */
     val showFilter: Boolean = false,
-    /** Show the song name and preset in a corner. */
+    /** Show the "now playing" card (song from Spotify or any player). */
     val showInfo: Boolean = false,
+    /** What the now-playing card shows. */
+    val showCover: Boolean = true,
+    val showTitle: Boolean = true,
+    val showArtist: Boolean = true,
+    val showAlbum: Boolean = false,
+    val showPreset: Boolean = true,
+    val showProgress: Boolean = false,
+    val infoPosition: RoomCorner = RoomCorner.TOP_LEFT,
+    /** Card size, 1 = normal. */
+    val infoSize: Float = 1f,
+    val coverStyle: CoverStyle = CoverStyle.ROUNDED,
+    /** Dark see-through card behind it (easier to read; not for keying). */
+    val infoBackdrop: Boolean = false,
     /** Which way the room is shown; landscape fills a TV-shaped frame for recording. */
     val orientation: RoomOrientation = RoomOrientation.AUTO,
-)
+) {
+    companion object {
+        const val MIN_SIZE = 0.6f
+        const val MAX_SIZE = 2f
+    }
+}
+
+@Serializable
+enum class RoomCorner { TOP_LEFT, TOP_CENTER, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT }
+
+@Serializable
+enum class CoverStyle {
+    SQUARE,
+    ROUNDED,
+    CIRCLE,
+    /** Round and spinning like a record while the song plays. */
+    VINYL,
+}
 
 @Serializable
 enum class RoomOrientation {
@@ -566,6 +596,8 @@ fun Look.sanitized(): Look = copy(
         beatFxMs = filter.beatFxMs.coerceIn(40f, 1000f),
     ),
 )
+
+fun Room.sanitized(): Room = copy(infoSize = infoSize.coerceIn(Room.MIN_SIZE, Room.MAX_SIZE))
 
 fun Performance.sanitized(): Performance = copy(
     fpsCap = if (fpsCap in Limits.FPS_OPTIONS) fpsCap else 60,

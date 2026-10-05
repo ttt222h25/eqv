@@ -12,6 +12,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -63,10 +66,13 @@ import com.eqv.visualizer.media.MediaMonitor
 import com.eqv.visualizer.render.VisualizerView
 import com.eqv.visualizer.settings.PresetOps
 import com.eqv.visualizer.settings.Room
+import com.eqv.visualizer.settings.CoverStyle
 import com.eqv.visualizer.settings.RoomColors
+import com.eqv.visualizer.settings.RoomCorner
 import com.eqv.visualizer.settings.RoomOrientation
 import com.eqv.visualizer.settings.SettingsRepository
 import com.eqv.visualizer.ui.theme.Nothing
+import kotlin.math.roundToInt
 
 /**
  * The room: the visuals full screen on a solid color (chroma green by default) so you can just
@@ -87,6 +93,7 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
     EngineWhileStarted("room")
     ImmersiveWhileShown()
     LockOrientation(room.orientation)
+    val perms = rememberPerms()
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Box(Modifier.fillMaxSize().background(Color(room.background))) {
@@ -112,12 +119,17 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
             ) { controls = !controls },
         )
         if (room.showInfo) {
-            val active = PresetOps.find(s, s.activePresetId)
-            val song = media.top?.let { listOfNotNull(it.title, it.artist).joinToString(" — ") }?.takeIf { it.isNotBlank() }
-            Column(Modifier.align(Alignment.TopStart).padding(horizontal = 28.dp, vertical = 48.dp)) {
-                if (song != null) Text(song, style = MaterialTheme.typography.titleMedium, color = infoColor(room.background), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text((active?.name ?: "Custom").uppercase(), style = MaterialTheme.typography.labelMedium, color = infoColor(room.background).copy(alpha = 0.7f))
-            }
+            NowPlayingCard(
+                room = room,
+                track = media.top,
+                presetName = PresetOps.find(s, s.activePresetId)?.name ?: "Custom",
+                textColor = infoColor(room.background),
+                // Clear of the camera hole and rounded corners, whichever way the phone is turned.
+                modifier = Modifier
+                    .align(cornerAlignment(room.infoPosition))
+                    .windowInsetsPadding(WindowInsets.displayCutout)
+                    .padding(horizontal = 28.dp, vertical = 32.dp),
+            )
         }
         AnimatedVisibility(
             visible = controls,
@@ -128,6 +140,7 @@ fun RoomScreen(onExit: () -> Unit, onHelp: () -> Unit) {
         ) {
             RoomControls(
                 landscape = landscape,
+                canReadSongs = perms.listener,
                 room = room,
                 presetName = PresetOps.find(s, s.activePresetId)?.name ?: "Custom",
                 demo = demo,
@@ -216,6 +229,7 @@ private fun ImmersiveWhileShown() {
 @Composable
 private fun RoomControls(
     landscape: Boolean,
+    canReadSongs: Boolean,
     room: Room,
     presetName: String,
     demo: Boolean,
@@ -290,8 +304,29 @@ private fun RoomControls(
 
         Spacer(Modifier.height(6.dp))
         SwitchRow("Screen filter", room.showFilter, "Off keeps the background one clean color for keying") { v -> onEdit { it.copy(showFilter = v) } }
-        SwitchRow("Song & preset name", room.showInfo, "Shown in the top corner") { v -> onEdit { it.copy(showInfo = v) } }
         SwitchRow("Demo beat", demo, "A built-in beat when no music is playing") { onDemo() }
+
+        SectionTitle("Now playing")
+        SwitchRow(
+            "Show the song",
+            room.showInfo,
+            if (canReadSongs) "Cover and name from Spotify or any player" else "Needs notification access: Home → More → Setup",
+        ) { v -> onEdit { it.copy(showInfo = v) } }
+        if (room.showInfo) {
+            SwitchRow("Cover", room.showCover) { v -> onEdit { it.copy(showCover = v) } }
+            SwitchRow("Song title", room.showTitle) { v -> onEdit { it.copy(showTitle = v) } }
+            SwitchRow("Artist", room.showArtist) { v -> onEdit { it.copy(showArtist = v) } }
+            SwitchRow("Album", room.showAlbum) { v -> onEdit { it.copy(showAlbum = v) } }
+            SwitchRow("Preset name", room.showPreset) { v -> onEdit { it.copy(showPreset = v) } }
+            SwitchRow("Progress bar", room.showProgress, "Time played and song length") { v -> onEdit { it.copy(showProgress = v) } }
+            ChoiceRow("Position", RoomCorner.entries, room.infoPosition, ::cornerName) { v -> onEdit { it.copy(infoPosition = v) } }
+            if (room.showCover) {
+                ChoiceRow("Cover style", CoverStyle.entries, room.coverStyle, ::coverStyleName) { v -> onEdit { it.copy(coverStyle = v) } }
+            }
+            SliderRow("Size", room.infoSize, Room.MIN_SIZE..Room.MAX_SIZE, { "${(it * 100).roundToInt()}%" }) { v -> onEdit { it.copy(infoSize = v) } }
+            SwitchRow("Dark card behind", room.infoBackdrop, "Easier to read on bright colors. Leave off for green screen.") { v -> onEdit { it.copy(infoBackdrop = v) } }
+        }
+
         Row(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
             PrimaryButton("Hide controls", onClick = onHide)
         }

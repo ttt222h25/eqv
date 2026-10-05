@@ -107,6 +107,7 @@ class SettingsRepository private constructor(context: Context) {
     private fun AppSettings.normalized(): AppSettings = copy(
         look = look.sanitized(),
         performance = performance.sanitized(),
+        room = room.sanitized(),
     )
 
     companion object {

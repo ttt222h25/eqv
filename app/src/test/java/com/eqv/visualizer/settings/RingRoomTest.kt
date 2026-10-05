@@ -1,6 +1,7 @@
 package com.eqv.visualizer.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -43,6 +44,10 @@ class RingRoomTest {
         assertEquals(RadialDirection.OUT, s.look.radial.direction)
         assertEquals(RoomColors.GREEN, s.room.background)
         assertEquals(RoomOrientation.AUTO, s.room.orientation)
+        // Now-playing card: off, but cover / title / artist / preset ready when turned on.
+        assertFalse(s.room.showInfo)
+        assertTrue(s.room.showCover && s.room.showTitle && s.room.showArtist && s.room.showPreset)
+        assertEquals(RoomCorner.TOP_LEFT, s.room.infoPosition)
         assertTrue(s.guidesSeen.isEmpty())
         assertTrue(s.craftTips)
     }
@@ -50,12 +55,22 @@ class RingRoomTest {
     @Test
     fun roomAndGuidesSurviveARoundTrip() {
         val s = AppSettings(
-            room = Room(background = RoomColors.BLUE, showFilter = true, showInfo = true, orientation = RoomOrientation.LANDSCAPE),
+            room = Room(
+                background = RoomColors.BLUE, showFilter = true, showInfo = true, orientation = RoomOrientation.LANDSCAPE,
+                showCover = false, showAlbum = true, showProgress = true, infoPosition = RoomCorner.BOTTOM_RIGHT,
+                infoSize = 1.4f, coverStyle = CoverStyle.VINYL, infoBackdrop = true,
+            ),
             guidesSeen = setOf("home", "visuals"),
             craftTips = false,
             look = Look(radial = RadialLayer(style = RadialStyle.SEGMENTS, direction = RadialDirection.BOTH, arc = 0.5f)),
         )
         val back = SettingsJson.decodeFromString(AppSettings.serializer(), SettingsJson.encodeToString(AppSettings.serializer(), s))
         assertEquals(s, back)
+    }
+
+    @Test
+    fun roomCardSizeIsClamped() {
+        assertEquals(Room.MAX_SIZE, Room(infoSize = 9f).sanitized().infoSize, 0f)
+        assertEquals(Room.MIN_SIZE, Room(infoSize = 0f).sanitized().infoSize, 0f)
     }
 }

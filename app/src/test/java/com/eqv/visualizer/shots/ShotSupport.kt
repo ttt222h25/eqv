@@ -134,3 +134,30 @@ class ShotApp : android.app.Application() {
         com.eqv.visualizer.render.VisualizerView.stillForTests = true
     }
 }
+
+/** A song "playing in Spotify" with a cover, and the room's now-playing card switched on. */
+fun showFakeSong(context: android.content.Context, position: com.eqv.visualizer.settings.RoomCorner = com.eqv.visualizer.settings.RoomCorner.TOP_LEFT) {
+    val art = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
+    android.graphics.Canvas(art).apply {
+        val p = android.graphics.Paint().apply {
+            shader = android.graphics.LinearGradient(0f, 0f, 300f, 300f, 0xFFFF2BD6.toInt(), 0xFF22E5FF.toInt(), android.graphics.Shader.TileMode.CLAMP)
+        }
+        drawRect(0f, 0f, 300f, 300f, p)
+        p.shader = null
+        p.color = 0xFFFFFFFF.toInt()
+        drawCircle(150f, 150f, 60f, p)
+    }
+    val now = android.os.SystemClock.elapsedRealtime()
+    com.eqv.visualizer.media.MediaMonitor.state.value = com.eqv.visualizer.media.MediaState(
+        connected = true,
+        sessions = listOf(
+            com.eqv.visualizer.media.NowPlaying(
+                "com.spotify.music", "Blinding Lights", "The Weeknd", playing = true,
+                album = "After Hours", art = art, durationMs = 200_000, positionMs = 74_000, positionAt = now, speed = 1f,
+            ),
+        ),
+    )
+    com.eqv.visualizer.settings.SettingsRepository.get(context).update {
+        it.copy(room = it.room.copy(showInfo = true, showAlbum = true, showProgress = true, infoPosition = position))
+    }
+}
