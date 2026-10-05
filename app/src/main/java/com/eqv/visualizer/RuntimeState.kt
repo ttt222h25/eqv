@@ -101,6 +101,10 @@ object RuntimeState {
     @Volatile
     var albumColors: IntArray? = null
 
+    /** The playing song's cover (for the room's blurred-cover background), or null. */
+    @Volatile
+    var albumArt: android.graphics.Bitmap? = null
+
     @Volatile
     var outputRoute: OutputRoute = OutputRoute.SPEAKER
 }

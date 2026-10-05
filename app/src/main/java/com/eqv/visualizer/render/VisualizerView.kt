@@ -33,11 +33,14 @@ import com.eqv.visualizer.settings.SettingsRepository
 class VisualizerView(
     context: Context,
     private val preview: Boolean,
-    /** Full-screen room: real geometry like the overlay, drawn on the room's background color. */
+    /** Full-screen room: real geometry like the overlay, drawn on the room's background. */
     private val room: Boolean = false,
 ) : View(context), Choreographer.FrameCallback {
     val renderer = VisualRenderer(AudioEngine.ring).also { it.ctx.preview = preview }
     private val repo = SettingsRepository.get(context)
+    /** The room's background (solid color or album glow / cover); unused elsewhere. */
+    private val backdrop by lazy { RoomBackdrop() }
+    private val softPass by lazy { SoftPass() }
     private var running = false
     private var lastDrawNanos = 0L
 
@@ -199,11 +202,20 @@ class VisualizerView(
     }
 
     private fun drawOverlay(canvas: Canvas, s: AppSettings, now: Long) {
+        val soft = if (room) s.room.soften else 0f
         if (room) {
-            canvas.drawColor(s.room.background)
+            backdrop.draw(canvas, s.room, renderer.ctx.frame, renderer.ctx.beatEnv, renderer.ctx.geometry, now)
             renderer.drawFilter = s.room.showFilter
         }
-        renderer.draw(canvas, now, s, syncDelayNanos(s), applyThumpTransform = true)
+        if (soft > 0.01f && canvas.isHardwareAccelerated) {
+            // Room "soft visuals": the visuals drawn once, shown blurred with a fainter sharp copy on top.
+            val c = softPass.begin(width, height)
+            renderer.draw(c, now, s, syncDelayNanos(s), applyThumpTransform = true)
+            softPass.end()
+            softPass.draw(canvas, soft, soft * SOFT_MAX_DP * resources.displayMetrics.density)
+        } else {
+            renderer.draw(canvas, now, s, syncDelayNanos(s), applyThumpTransform = true)
+        }
         if (s.debug.overlayDebug || s.performance.showFps) {
             renderer.hud.draw(canvas, renderer.ctx, stats, RuntimeState.engine.value.active, s.debug.overlayDebug)
         }
@@ -257,6 +269,9 @@ class VisualizerView(
         /** Screenshot tests: draw one still frame instead of animating forever. */
         @Volatile
         var stillForTests = false
+
+        /** Blur radius of the room's "soft visuals" at 100%. */
+        const val SOFT_MAX_DP = 14f
 
         /** Draw when at least 90% of the frame interval has passed (absorbs vsync jitter). */
         const val FRAME_SLACK = 0.9f

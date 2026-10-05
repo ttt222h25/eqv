@@ -60,11 +60,35 @@ data class Room(
     val infoBackdrop: Boolean = false,
     /** Which way the room is shown; landscape fills a TV-shaped frame for recording. */
     val orientation: RoomOrientation = RoomOrientation.AUTO,
+    /** What fills the background: the solid [background] color, or something from the album. */
+    val backdrop: RoomBackdrop = RoomBackdrop.SOLID,
+    /** Album backgrounds: how dark they are, so the visuals stay in front, 0..1. */
+    val dim: Float = 0.35f,
+    /** Album backgrounds: how fast the glow drifts and the cover pans, 0..1. */
+    val drift: Float = 0.35f,
+    /** Album backgrounds: how much they swell with the bass and lift on beats, 0..1. */
+    val react: Float = 0.6f,
+    /** Soft floating lights in the album colors, 0..1 (0 = none). */
+    val particles: Float = 0.35f,
+    /** Blurred cover: how soft the blur is, 0..1. */
+    val blur: Float = 0.7f,
+    /** Soft visuals: blurs the visuals' edges into a dreamy glow, 0..1 (0 = sharp). */
+    val soften: Float = 0.3f,
 ) {
     companion object {
         const val MIN_SIZE = 0.6f
         const val MAX_SIZE = 2f
     }
+}
+
+@Serializable
+enum class RoomBackdrop {
+    /** The chosen solid color (green screen). */
+    SOLID,
+    /** Soft blobs of the album's colors drifting and breathing with the music. */
+    ALBUM_GLOW,
+    /** The album cover, blurred and slowly panning, pulsing with the bass. */
+    ALBUM_COVER,
 }
 
 @Serializable
@@ -597,7 +621,15 @@ fun Look.sanitized(): Look = copy(
     ),
 )
 
-fun Room.sanitized(): Room = copy(infoSize = infoSize.coerceIn(Room.MIN_SIZE, Room.MAX_SIZE))
+fun Room.sanitized(): Room = copy(
+    infoSize = infoSize.coerceIn(Room.MIN_SIZE, Room.MAX_SIZE),
+    dim = dim.coerceIn(0f, 0.9f),
+    drift = drift.coerceIn(0f, 1f),
+    react = react.coerceIn(0f, 1f),
+    particles = particles.coerceIn(0f, 1f),
+    blur = blur.coerceIn(0f, 1f),
+    soften = soften.coerceIn(0f, 1f),
+)
 
 fun Performance.sanitized(): Performance = copy(
     fpsCap = if (fpsCap in Limits.FPS_OPTIONS) fpsCap else 60,

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import com.eqv.visualizer.settings.CoverStyle
+import com.eqv.visualizer.settings.RoomBackdrop
 import com.eqv.visualizer.settings.RoomCorner
 import com.eqv.visualizer.settings.SettingsRepository
 import com.eqv.visualizer.ui.App
@@ -51,6 +52,20 @@ class RoomShots {
     fun landscapeWithControls() {
         showFakeSong(rule.activity)
         shot("land-controls", controls = true)
+    }
+
+    @Test
+    fun albumGlowWithParticles() {
+        showFakeSong(rule.activity)
+        SettingsRepository.get(rule.activity).update { it.copy(room = it.room.copy(backdrop = RoomBackdrop.ALBUM_GLOW, particles = 0.8f)) }
+        shot("land-album-glow", controls = false)
+    }
+
+    @Test
+    fun blurredCover() {
+        showFakeSong(rule.activity, RoomCorner.BOTTOM_LEFT)
+        SettingsRepository.get(rule.activity).update { it.copy(room = it.room.copy(backdrop = RoomBackdrop.ALBUM_COVER, soften = 0.6f)) }
+        shot("land-blurred-cover", controls = false)
     }
 
     @Test

@@ -408,7 +408,7 @@ object Guides {
     val room = Guide(
         key = "room",
         title = "Room",
-        intro = "The room fills the whole screen with one color and plays the visuals on top, bigger than ever. Use it to just enjoy the visuals, as a light show on a TV or tablet, or as a green screen: record the screen, then remove the color in a video editor (CapCut, Premiere, DaVinci, OBS) to put the visuals over your own video.",
+        intro = "The room fills the whole screen with one color, a soft glow from the song's cover, or the cover itself blurred, and plays the visuals on top, bigger than ever. Use it to just enjoy the visuals, as a light show on a TV or tablet, or as a green screen: record the screen, then remove the color in a video editor (CapCut, Premiere, DaVinci, OBS) to put the visuals over your own video.",
         sections = listOf(
             GuideSection(
                 "Using the room",
@@ -424,7 +424,14 @@ object Guides {
             GuideSection(
                 "Controls",
                 items = listOf(
-                    item("Background", "Green screen (#00B140, the standard key color), Bright green, Blue screen, Magenta, Black, White, Grey, or Custom to pick any color."),
+                    item("Background", "Solid color: one plain color, for green screen. Album glow: soft light in the colors of the song's cover, drifting slowly and swelling with the bass. Blurred cover: the cover itself, blurred big, slowly zooming and panning, pulsing with the bass. Both album backgrounds fade smoothly into the next song."),
+                    item("Colors", "Green screen (#00B140, the standard key color), Bright green, Blue screen, Magenta, Black, White, Grey, or Custom to pick any color. With an album background, this color is used when the song has no cover."),
+                    item("Darkness", "Album backgrounds: how dark they are, so the visuals stand out in front. Beats lift it a little."),
+                    item("Drift", "Album backgrounds: how fast the glow moves and the cover pans. Left = still."),
+                    item("React to music", "Album backgrounds: how much the glow swells and the cover zooms with the bass, and how much beats brighten them. Off = calm, no reaction."),
+                    item("Soft particles", "Album backgrounds: soft floating lights in the cover's colors that drift up and twinkle, growing with the treble."),
+                    item("Blur", "Blurred cover: how soft the cover is. Low shows more of the picture."),
+                    item("Softness", "Soft visuals: blurs the edges of the visuals into a dreamy glow. 0 = sharp. Set it to 0 for the cleanest green screen key."),
                     item("Orientation", "Auto-rotate turns with the phone (auto-rotate must be on). Portrait stays upright, for Reels and TikTok. Landscape stays sideways either way up, for YouTube-shaped videos or a phone on a stand; the controls move to a side panel."),
                     item("Preset ‹ ›", "Switch presets without leaving."),
                     item("Screen filter", "Draw the preset's filter in the room. Keep it off for keying: filters add lines and shade to the background."),
@@ -436,6 +443,7 @@ object Guides {
             GuideSection(
                 "Green screen tips",
                 items = listOf(
+                    item("Use Solid color", "Album backgrounds move and change color, so they can't be keyed out. Pick Solid color for green screen."),
                     item("Pick a key color the visuals don't use", "Green background → use red, white, blue or pink visuals. Blue background → red, yellow, white. Avoid green visuals on green."),
                     item("Keep glow moderate", "A big glow blends into the background and keys out softly. That can look great, or wash out; try both."),
                     item("Turn off Pulse Flash and Vignette", "They tint the whole background on beats, which breaks the key."),

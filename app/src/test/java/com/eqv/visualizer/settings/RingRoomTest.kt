@@ -73,4 +73,19 @@ class RingRoomTest {
         assertEquals(Room.MAX_SIZE, Room(infoSize = 9f).sanitized().infoSize, 0f)
         assertEquals(Room.MIN_SIZE, Room(infoSize = 0f).sanitized().infoSize, 0f)
     }
+
+    @Test
+    fun albumBackdropDefaultsAndClamps() {
+        val r = Room()
+        assertEquals(RoomBackdrop.SOLID, r.backdrop)
+        val c = Room(dim = 5f, drift = -1f, react = 2f, particles = 9f, blur = -3f, soften = 4f).sanitized()
+        assertEquals(0.9f, c.dim, 0f)
+        assertEquals(0f, c.drift, 0f)
+        assertEquals(1f, c.react, 0f)
+        assertEquals(1f, c.particles, 0f)
+        assertEquals(0f, c.blur, 0f)
+        assertEquals(1f, c.soften, 0f)
+        val back = SettingsJson.decodeFromString(AppSettings.serializer(), SettingsJson.encodeToString(AppSettings.serializer(), AppSettings(room = Room(backdrop = RoomBackdrop.ALBUM_COVER))))
+        assertEquals(RoomBackdrop.ALBUM_COVER, back.room.backdrop)
+    }
 }
