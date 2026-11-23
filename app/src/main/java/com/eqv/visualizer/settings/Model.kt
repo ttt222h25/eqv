@@ -168,6 +168,18 @@ object NothingColors {
 @Serializable
 enum class EdgeStyle { FULL, RUNNING, SPLIT, BASS_CORNERS }
 
+/** Which part of the sound drives one edge. ALL = the layer's normal "Reacts to" mix. */
+@Serializable
+enum class EdgeBand { ALL, BASS, MID, TREBLE }
+
+/** Which way the glow spreads from the core line. */
+@Serializable
+enum class EdgeDirection { INWARD, OUTWARD, BOTH }
+
+/** Shape of the glow falloff. Keep ordinals in sync with the shader's uFall branches. */
+@Serializable
+enum class EdgeFalloff { SOFT, SHARP, NEON }
+
 @Serializable
 data class EdgeLayer(
     val enabled: Boolean = true,
@@ -191,6 +203,40 @@ data class EdgeLayer(
     val reactivity: Float = 0.25f,
     /** Base visibility when the music is silent, 0..1. */
     val idleLevel: Float = 0.08f,
+
+    // ---- per-edge controls (defaults reproduce the old look exactly)
+    val topOn: Boolean = true,
+    val bottomOn: Boolean = true,
+    val leftOn: Boolean = true,
+    val rightOn: Boolean = true,
+    /** Brightness multiplier per edge, 0..1. */
+    val topStrength: Float = 1f,
+    val bottomStrength: Float = 1f,
+    val leftStrength: Float = 1f,
+    val rightStrength: Float = 1f,
+    /** Which frequencies drive each edge. */
+    val topBand: EdgeBand = EdgeBand.ALL,
+    val bottomBand: EdgeBand = EdgeBand.ALL,
+    val leftBand: EdgeBand = EdgeBand.ALL,
+    val rightBand: EdgeBand = EdgeBand.ALL,
+
+    // ---- glow shape
+    val direction: EdgeDirection = EdgeDirection.INWARD,
+    val falloff: EdgeFalloff = EdgeFalloff.SOFT,
+    /** Distance of the core line from the screen edge, in dp (lets the glow spread outward). */
+    val gapDp: Float = 0f,
+    /** Dashes around the screen, 0 = solid. */
+    val segments: Int = 0,
+    /** Lit fraction of each dash, 0..1. */
+    val segmentFill: Float = 0.6f,
+
+    // ---- motion
+    /** Extra brightness and line swell on each beat, 0..1. */
+    val beatPulse: Float = 0f,
+    /** Rise time in ms (0 = instant). */
+    val attackMs: Float = 0f,
+    /** Fall time in ms (0 = as the analyzer decays). */
+    val releaseMs: Float = 0f,
 )
 
 @Serializable

@@ -5,8 +5,13 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.RuntimeShader
+import com.eqv.visualizer.audio.dsp.AnalysisFrame
 import com.eqv.visualizer.settings.ColorMode
+import com.eqv.visualizer.settings.EdgeBand
+import com.eqv.visualizer.settings.EdgeDirection
+import com.eqv.visualizer.settings.EdgeLayer
 import com.eqv.visualizer.settings.EdgeStyle
+import kotlin.math.exp
 import kotlin.math.max
 
 /**
@@ -26,6 +31,9 @@ class EdgeGlowLayer {
     private val paint = Paint()
     private val stops = IntArray(3)
     private var head = 0f
+
+    /** Smoothed brightness per edge: top, bottom, left, right. */
+    private val edgeI = FloatArray(4)
 
     // Fallback path rendering.
     private val path = Path()
@@ -48,7 +56,11 @@ class EdgeGlowLayer {
         val react = cfg.reactivity.coerceIn(0f, 1f)
         val drive = f.bass * (1f - react) + f.level * react * 1.6f
         val pulse = ctx.beatEnv * ctx.look.beat.rippleStrength * 0.35f
-        val intensity = (cfg.idleLevel + (1f - cfg.idleLevel) * (drive * 1.5f).coerceIn(0f, 1f) + pulse).coerceIn(0f, 1.2f)
+        val extra = ctx.beatEnv * cfg.beatPulse.coerceIn(0f, 1f) * 0.6f
+        fun levelFor(d: Float) =
+            (cfg.idleLevel + (1f - cfg.idleLevel) * (d * 1.5f).coerceIn(0f, 1f) + pulse + extra).coerceIn(0f, 1.2f)
+        val intensity = levelFor(drive)
+        updateEdges(cfg, f, drive, ::levelFor, ctx.dtSec)
         head = (head + ctx.dtSec * cfg.speed * (0.4f + drive)) % 1f
 
         val flash = if (ctx.look.thump.enabled && ctx.look.thump.edgeFlash) ctx.thumpEnv else 0f
@@ -58,6 +70,28 @@ class EdgeGlowLayer {
         val s = shader
         if (s != null && drawShader(canvas, ctx, s, intensity, flash, chroma, adjust)) return
         drawFallback(canvas, ctx, intensity, flash, adjust)
+    }
+
+    private fun bandDrive(b: EdgeBand, all: Float, f: AnalysisFrame): Float = when (b) {
+        EdgeBand.ALL -> all
+        EdgeBand.BASS -> f.bass
+        EdgeBand.MID -> f.mid
+        EdgeBand.TREBLE -> f.treble
+    }
+
+    private fun updateEdges(cfg: EdgeLayer, f: AnalysisFrame, all: Float, levelFor: (Float) -> Float, dt: Float) {
+        smoothEdge(0, cfg.topOn, cfg.topStrength, levelFor(bandDrive(cfg.topBand, all, f)), cfg, dt)
+        smoothEdge(1, cfg.bottomOn, cfg.bottomStrength, levelFor(bandDrive(cfg.bottomBand, all, f)), cfg, dt)
+        smoothEdge(2, cfg.leftOn, cfg.leftStrength, levelFor(bandDrive(cfg.leftBand, all, f)), cfg, dt)
+        smoothEdge(3, cfg.rightOn, cfg.rightStrength, levelFor(bandDrive(cfg.rightBand, all, f)), cfg, dt)
+    }
+
+    /** Attack/release smoothing; 0 ms means "no extra smoothing" so old presets look identical. */
+    private fun smoothEdge(i: Int, on: Boolean, strength: Float, level: Float, cfg: EdgeLayer, dt: Float) {
+        val target = if (on) level * strength.coerceIn(0f, 1f) else 0f
+        val cur = edgeI[i]
+        val ms = if (target > cur) cfg.attackMs else cfg.releaseMs
+        edgeI[i] = if (ms <= 1f) target else cur + (target - cur) * (1f - exp(-dt * 1000f / ms))
     }
 
     private fun drawShader(
@@ -79,7 +113,15 @@ class EdgeGlowLayer {
                 max(0f, g.cornerRadii[0] + adjust), max(0f, g.cornerRadii[1] + adjust),
                 max(0f, g.cornerRadii[2] + adjust), max(0f, g.cornerRadii[3] + adjust),
             )
-            s.setFloatUniform("uThick", g.dp(cfg.thicknessDp))
+            s.setFloatUniform("uThick", g.dp(cfg.thicknessDp) * (1f + ctx.beatEnv * cfg.beatPulse.coerceIn(0f, 1f) * 0.8f))
+            s.setFloatUniform("uEdgeI", edgeI[0], edgeI[1], edgeI[2], edgeI[3])
+            s.setFloatUniform("uBlend", 0.08f * minOf(g.width, g.height))
+            s.setFloatUniform("uGap", g.dp(cfg.gapDp))
+            s.setFloatUniform("uIn", if (cfg.direction != EdgeDirection.OUTWARD) 1f else 0f)
+            s.setFloatUniform("uOut", if (cfg.direction != EdgeDirection.INWARD) 1f else 0f)
+            s.setFloatUniform("uFall", cfg.falloff.ordinal.toFloat())
+            s.setFloatUniform("uSegs", cfg.segments.coerceIn(0, 120).toFloat())
+            s.setFloatUniform("uSegFill", cfg.segmentFill.coerceIn(0.05f, 0.95f))
             s.setFloatUniform("uGlowW", g.dp(cfg.glowWidthDp) * (0.4f + cfg.color.glow))
             s.setFloatUniform("uIntensity", intensity)
             s.setFloatUniform("uStyle", cfg.style.ordinal.toFloat())
@@ -166,6 +208,14 @@ uniform float uRainbow;
 uniform float4 uCut;
 uniform float uChroma;
 uniform float uFlash;
+uniform float4 uEdgeI;
+uniform float uBlend;
+uniform float uGap;
+uniform float uIn;
+uniform float uOut;
+uniform float uFall;
+uniform float uSegs;
+uniform float uSegFill;
 layout(color) uniform half4 uC0;
 layout(color) uniform half4 uC1;
 layout(color) uniform half4 uC2;
@@ -203,15 +253,70 @@ float styleMask(float t, float2 p, float2 b) {
     return smoothstep(0.45, 0.95, c);
 }
 
+float fall(float x) {
+    if (uFall < 0.5) {
+        return exp(-x);
+    }
+    if (uFall < 1.5) {
+        float k = max(1.0 - x, 0.0);
+        return k * k;
+    }
+    return exp(-x * 3.0) * 0.85 + exp(-x * 0.7) * 0.18;
+}
+
+float edgeW(float2 pos) {
+    float dT = pos.y;
+    float dB = uSize.y - pos.y;
+    float dL = pos.x;
+    float dR = uSize.x - pos.x;
+    float dm = min(min(dT, dB), min(dL, dR));
+    float k = max(uBlend, 1.0);
+    float wT = exp(-(dT - dm) / k);
+    float wB = exp(-(dB - dm) / k);
+    float wL = exp(-(dL - dm) / k);
+    float wR = exp(-(dR - dm) / k);
+    return (wT * uEdgeI.x + wB * uEdgeI.y + wL * uEdgeI.z + wR * uEdgeI.w) / (wT + wB + wL + wR);
+}
+
+float segMask(float2 pos) {
+    if (uSegs < 0.5) {
+        return 1.0;
+    }
+    float w = uSize.x;
+    float h = uSize.y;
+    float dT = pos.y;
+    float dB = h - pos.y;
+    float dL = pos.x;
+    float dR = w - pos.x;
+    float u = 0.0;
+    if (dT <= dB && dT <= dL && dT <= dR) {
+        u = pos.x;
+    } else if (dR <= dB && dR <= dL) {
+        u = w + pos.y;
+    } else if (dB <= dL) {
+        u = w + h + (w - pos.x);
+    } else {
+        u = 2.0 * w + h + (h - pos.y);
+    }
+    float f = fract(u / (2.0 * (w + h)) * uSegs);
+    return smoothstep(0.0, 0.04, f) * (1.0 - smoothstep(uSegFill, uSegFill + 0.04, f));
+}
+
 float edgeVal(float2 pos) {
     float2 b = uSize * 0.5;
     float2 p = pos - b;
-    float d = -sdRoundBox(p, b, uRadii);
+    float d = -sdRoundBox(p, b, uRadii) - uGap;
     float core = 1.0 - smoothstep(uThick, uThick + 1.5, d);
-    float g = exp(-max(d - uThick, 0.0) / max(uGlowW, 1.0));
+    if (uGap > 0.5) {
+        core = core * smoothstep(-1.5, 0.0, d);
+    }
+    float gw = max(uGlowW, 1.0);
+    float gx = d > uThick ? (d - uThick) / gw : (d < 0.0 ? -d / gw : 0.0);
+    float gdir = d > uThick ? uIn : (d < 0.0 ? uOut : 1.0);
+    float g = fall(gx) * gdir;
     float v = core * 0.9 + g * 0.7;
-    float m = styleMask(perim(p), p, b);
-    float val = v * m * uIntensity;
+    float m = styleMask(perim(p), p, b) * segMask(pos);
+    float val = v * m * edgeW(pos);
     if (uCut.w > 0.5) {
         float dc = abs(length(pos - uCut.xy) - uCut.z - uThick);
         float ring = (1.0 - smoothstep(uThick * 0.6, uThick * 0.6 + 1.5, dc)) * 0.9

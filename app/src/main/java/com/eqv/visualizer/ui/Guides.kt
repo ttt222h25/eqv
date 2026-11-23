@@ -188,6 +188,13 @@ object Guides {
                     item("Camera ring", "A glowing ring around the punch-hole camera."),
                     item("Reacts to", "Left: only the bass moves it. Right: everything (all of the sound)."),
                     item("Idle glow", "How much it still glows when the music is quiet. 0 = fully dark between sounds."),
+                    item("Top / Bottom / Left / Right", "Each side of the screen on its own: on or off, how bright (strength), and which sound moves it. Default uses the Reacts to mix; Bass, Mids or Highs make that side follow only that part of the music."),
+                    item("Direction", "Inward: the glow spreads into the screen. Outward: it spreads toward the screen edge (use Gap from edge so there is room to see it). Both: either side of the line."),
+                    item("Falloff", "Soft: smooth fade. Sharp: a tighter glow that ends clearly. Neon: a bright thin core with a faint wide halo."),
+                    item("Gap from edge", "Moves the line away from the screen edge."),
+                    item("Segments", "Breaks the line into dashes around the screen. 0 = solid. Segment fill sets how long each dash is."),
+                    item("Beat pulse", "Extra brightness and a thicker line on every beat. 0 = off."),
+                    item("Attack / Release", "How fast it lights up and how slowly it fades. Attack instant and Release default keep the original feel."),
                 ),
             ),
             GuideSection(

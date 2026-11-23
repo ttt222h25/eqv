@@ -30,6 +30,10 @@ import com.eqv.visualizer.settings.AudioSourceMode
 import com.eqv.visualizer.settings.BarsPosition
 import com.eqv.visualizer.settings.BeatFx
 import com.eqv.visualizer.settings.BarsStyle
+import com.eqv.visualizer.settings.EdgeBand
+import com.eqv.visualizer.settings.EdgeDirection
+import com.eqv.visualizer.settings.EdgeFalloff
+import com.eqv.visualizer.settings.EdgeLayer
 import com.eqv.visualizer.settings.EdgeStyle
 import com.eqv.visualizer.settings.FilterLayer
 import com.eqv.visualizer.settings.FilterStyle
@@ -62,6 +66,14 @@ private fun ScrollColumn(content: @Composable () -> Unit) {
         Spacer(Modifier.height(32.dp))
     }
 }
+
+private class EdgeSide(
+    val label: String,
+    val on: Boolean,
+    val strength: Float,
+    val band: EdgeBand,
+    val set: (EdgeLayer, Boolean, Float, EdgeBand) -> EdgeLayer,
+)
 
 private fun fmtPct(v: Float) = "${(v * 100).roundToInt()}%"
 private fun fmtMs(v: Float) = "${v.roundToInt()} ms"
@@ -138,6 +150,53 @@ fun LayersScreen() {
                         }
                     }
                     if (e.enabled) {
+                        Group("Edges") {
+                            Hint("Switch each side on or off, set how bright it is, and pick which sound moves it.")
+                            val sides = listOf(
+                                EdgeSide("Top", e.topOn, e.topStrength, e.topBand) { l, on, st, b -> l.copy(topOn = on, topStrength = st, topBand = b) },
+                                EdgeSide("Bottom", e.bottomOn, e.bottomStrength, e.bottomBand) { l, on, st, b -> l.copy(bottomOn = on, bottomStrength = st, bottomBand = b) },
+                                EdgeSide("Left", e.leftOn, e.leftStrength, e.leftBand) { l, on, st, b -> l.copy(leftOn = on, leftStrength = st, leftBand = b) },
+                                EdgeSide("Right", e.rightOn, e.rightStrength, e.rightBand) { l, on, st, b -> l.copy(rightOn = on, rightStrength = st, rightBand = b) },
+                            )
+                            for (side in sides) {
+                                SwitchRow(side.label, side.on) { v -> edit { it.copy(edge = side.set(e, v, side.strength, side.band)) } }
+                                if (side.on) {
+                                    SliderRow("${side.label} strength", side.strength, 0f..1f, ::fmtPct) { v -> edit { it.copy(edge = side.set(e, side.on, v, side.band)) } }
+                                    ChoiceRow("${side.label} reacts to", EdgeBand.entries, side.band, {
+                                        when (it) {
+                                            EdgeBand.ALL -> "Default"
+                                            EdgeBand.BASS -> "Bass"
+                                            EdgeBand.MID -> "Mids"
+                                            EdgeBand.TREBLE -> "Highs"
+                                        }
+                                    }) { v -> edit { it.copy(edge = side.set(e, side.on, side.strength, v)) } }
+                                }
+                            }
+                        }
+                        Group("Glow shape") {
+                            ChoiceRow("Direction", EdgeDirection.entries, e.direction, {
+                                when (it) {
+                                    EdgeDirection.INWARD -> "Inward"
+                                    EdgeDirection.OUTWARD -> "Outward"
+                                    EdgeDirection.BOTH -> "Both"
+                                }
+                            }) { v -> edit { it.copy(edge = e.copy(direction = v)) } }
+                            ChoiceRow("Falloff", EdgeFalloff.entries, e.falloff, {
+                                when (it) {
+                                    EdgeFalloff.SOFT -> "Soft"
+                                    EdgeFalloff.SHARP -> "Sharp"
+                                    EdgeFalloff.NEON -> "Neon"
+                                }
+                            }) { v -> edit { it.copy(edge = e.copy(falloff = v)) } }
+                            SliderRow("Gap from edge", e.gapDp, 0f..40f, ::fmtDp) { v -> edit { it.copy(edge = e.copy(gapDp = v)) } }
+                            SliderRow("Segments", e.segments.toFloat(), 0f..60f, { if (it < 1f) "solid" else "${it.roundToInt()}" }) { v -> edit { it.copy(edge = e.copy(segments = v.roundToInt())) } }
+                            if (e.segments > 0) SliderRow("Segment fill", e.segmentFill, 0.1f..0.9f, ::fmtPct) { v -> edit { it.copy(edge = e.copy(segmentFill = v)) } }
+                        }
+                        Group("Motion") {
+                            SliderRow("Beat pulse", e.beatPulse, 0f..1f, ::fmtPctOff) { v -> edit { it.copy(edge = e.copy(beatPulse = v)) } }
+                            SliderRow("Attack", e.attackMs, 0f..300f, { if (it < 1f) "instant" else fmtMs(it) }) { v -> edit { it.copy(edge = e.copy(attackMs = v)) } }
+                            SliderRow("Release", e.releaseMs, 0f..1500f, { if (it < 1f) "default" else fmtMs(it) }) { v -> edit { it.copy(edge = e.copy(releaseMs = v)) } }
+                        }
                         Group("Color") {
                             ColorSpecEditor(e.color) { c -> edit { it.copy(edge = e.copy(color = c)) } }
                         }
