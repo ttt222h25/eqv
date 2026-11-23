@@ -65,6 +65,20 @@ jobs:
             --title "EQV build ${{ github.run_number }}" \
             --notes "Debug build ${{ github.run_number }} from ${{ github.sha }}. Install eqv.apk on the phone; it updates in place over earlier builds."
 
+      # Branch builds get their own fixed link ("preview") so they can be tried on the phone
+      # without touching the "latest" release that main publishes.
+      - name: Publish preview release
+        if: github.event_name != 'pull_request' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete preview --yes --cleanup-tag || true
+          gh release create preview out/eqv.apk \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --title "EQV preview (${{ github.ref_name }}) build ${{ github.run_number }}" \
+            --notes "Branch ${{ github.ref_name }}, build ${{ github.run_number }}, commit ${{ github.sha }}."
+
       # Screenshots of every screen and every preset's overlay (Robolectric), published to the
       # "screens" pre-release so they can be reviewed without a phone. Never blocks the APK.
       - name: Screenshots (overlay)
